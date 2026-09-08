@@ -56,15 +56,29 @@ Funcionais, Requisitos Não Funcionais);
 ---
 # Product Backlog
 
-| Rank | Prioridade | User Story                                           | Estimativa | Sprint |
-|------|------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|------------|--------|
-| 1    | Alta       | ...                                                  | ...          | ...      |
-| 2    | Alta       | ...                                                  | ...          | ...      |
-| 3    | Alta       | ...                                                  | ...          | ...      |
-| ...  | Média      | ...                                                  | ...          | ...      |
-| 17   | Baixa      | ...                                                  | ...          | ...      |
+### Product Backlog Atualizado
 
+| Rank | Prioridade | User Story | Estimativa | Sprint |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | Alta | Como **usuário interno**, quero abrir uma ordem de serviço com descrição, prioridade e responsável, para iniciar o processo de manutenção sem depender de um perfil restrito e evitar gargalos. | 8 pontos | 1 |
+| 2 | Alta | Como **executor ou gestor responsável**, quero atualizar o status da ordem (em andamento, concluída, etc.) em um **quadro Kanban**, para manter o acompanhamento transparente e visual. | 5 pontos | 1 |
+| 3 | Alta | Como **gestor ou executor responsável**, quero encerrar uma ordem de serviço com registro de data e responsável, para garantir rastreabilidade e flexibilidade na condução. | 5 pontos | 1 |
+| 4 | Alta | Como **usuário interno**, quero consultar o histórico completo de uma ordem, para verificar todas as alterações realizadas. | 8 pontos | 2 |
+| 5 | Alta | Como sistema, devo notificar os envolvidos quando houver mudanças relevantes na ordem, para garantir comunicação eficiente. | 8 pontos | 2 |
+| 6 | Alta | Como administrador, quero manual de instalação disponível no Git, para facilitar implantação em ambiente de homologação. | 3 pontos | 1 |
+| 7 | Alta | Como **usuário interno**, quero manual de uso acessível, para aprender rapidamente a utilizar o sistema. | 3 pontos | 1 |
+| 8 | Alta | Como desenvolvedor, quero documentação da API (Swagger), para integrar facilmente com outros sistemas. | 5 pontos | 2 |
+| 9 | Média | Como gestor, quero definir prioridades nas ordens de serviço (urgência/criticidade), para otimizar recursos. | 8 pontos | 3 |
+| 10 | Média | Como sistema, devo registrar rastreabilidade das operações (log de auditoria), para garantir confiabilidade. | 8 pontos | 3 |
+| 11 | Média | Como **usuário interno**, quero uma interface intuitiva **baseada no método Kanban**, para visualizar o fluxo de trabalho de forma clara e reduzir a curva de aprendizado. | 13 pontos | 3 |
+| 12 | Média | Como gestor, quero relatórios de ordens abertas, em andamento e concluídas, para análise de desempenho. | 8 pontos | 4 |
+| 13 | Média | Como administrador, quero configurar perfis de acesso focados em **uso estritamente interno** (usuário padrão, executor, gestor, administrador), para garantir segurança sem expor a plataforma a clientes. | 8 pontos | 4 |
+| 14 | Baixa | Como **usuário interno**, quero pesquisar ordens por filtros avançados (responsável, prazo, status), para agilizar consultas. | 5 pontos | 5 |
+| 15 | Baixa | Como gestor, quero exportar relatórios em PDF/Excel, para compartilhar com a **equipe interna** (visto que nenhum cliente terá acesso ao sistema). | 5 pontos | 5 |
+| 16 | Baixa | Como administrador, quero configurar notificações personalizadas, para adequar às necessidades da empresa. | 8 pontos | 6 |
+| 17 | Baixa | Como sistema, devo suportar ambiente de homologação com capacidade limitada, para testes controlados. | 5 pontos | 6 |
 ---
+
 # Registro das Sprints
 
 | Sprint            | Previsão   | Status   | Histórico |
