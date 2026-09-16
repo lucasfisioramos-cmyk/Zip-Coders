@@ -1,0 +1,27 @@
+{
+  "name": "zip-coders",
+  "version": "1.0.0",
+  "description": "CRU Avançado Web, Requisitos não funcionais levando em conta a Arquitetura da Solução (Linguagem OO, BD Relacional) e Ambiente de homologação com capacidade limitada para o cliente Tema definido na matriz de competências do semestre do curso, no campo “produto sem contexto”",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucasfisioramos-cmyk/Zip-Coders.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lucasfisioramos-cmyk/Zip-Coders/issues"
+  },
+  "homepage": "https://github.com/lucasfisioramos-cmyk/Zip-Coders#readme",
+  "devDependencies": {
+    "prisma": "^8.0.0-rc.15"
+  },
+  "allowScripts": {
+    "prisma@8.0.0-rc.15": true
+  }
+}

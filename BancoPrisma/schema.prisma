@@ -1,0 +1,141 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// O provider pode ser "postgresql", "mysql", etc., dependendo do seu banco
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS (Listas de valores fixos)
+// ==========================================
+
+enum PerfilUsuario {
+  ADMIN
+  GESTOR
+  EXECUTOR
+  USUARIO
+}
+
+enum StatusOS {
+  ABERTA
+  EM_ANDAMENTO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum PrioridadeOS {
+  BAIXA
+  MEDIA
+  ALTA
+  URGENTE
+}
+
+// ==========================================
+// MODELOS (Tabelas)
+// ==========================================
+
+model Usuario {
+  id        String        @id @default(uuid())
+  nome      String        @db.VarChar(100)
+  email     String        @unique @db.VarChar(100)
+  senhaHash String        @map("senha_hash") @db.VarChar(255)
+  perfil    PerfilUsuario
+  ativo     Boolean       @default(true)
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  // Relacionamentos Inversos (Obrigatórios no Prisma para navegação)
+  ordensSolicitadas  OrdemServico[] @relation("OS_Solicitante")
+  ordensResponsaveis OrdemServico[] @relation("OS_Responsavel")
+  historicos         Historico[]
+  logsAuditoria      LogAuditoria[]
+
+  // Índices para consultas por perfil e status de ativação
+  @@index([perfil])
+  @@index([ativo])
+  @@map("usuarios")
+}
+
+model OrdemServico {
+  id            String       @id @default(uuid())
+  codigo        String       @unique @db.VarChar(20)
+  titulo        String       @db.VarChar(150)
+  descricao     String       @db.Text
+  status        StatusOS     @default(ABERTA)
+  prioridade    PrioridadeOS
+
+  // Relacionamento 1: Quem abriu/solicitou
+  // Restrict: não permite apagar um usuário que já solicitou alguma OS
+  solicitanteId String       @map("solicitante_id")
+  solicitante   Usuario      @relation("OS_Solicitante", fields: [solicitanteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  // Relacionamento 2: Quem é o responsável (Pode ser nulo inicialmente)
+  // SetNull: se o executor/responsável for removido, a OS não é apagada, só perde o vínculo
+  responsavelId String?      @map("responsavel_id")
+  responsavel   Usuario?     @relation("OS_Responsavel", fields: [responsavelId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  dataAbertura  DateTime     @default(now()) @map("data_abertura")
+  dataConclusao DateTime?    @map("data_conclusao")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relacionamento Inverso
+  historicos    Historico[]
+
+  // Índices para telas de listagem/filtro (status, prioridade, datas)
+  @@index([status])
+  @@index([prioridade])
+  @@index([solicitanteId])
+  @@index([responsavelId])
+  @@index([dataAbertura])
+  @@map("ordens_servico")
+}
+
+model Historico {
+  id            String   @id @default(uuid())
+
+  // Relacionamento com a Ordem de Serviço
+  // Cascade: se a OS for apagada, seu histórico é apagado junto (evita registros órfãos)
+  ordemId       String   @map("ordem_id")
+  ordem         OrdemServico @relation(fields: [ordemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // Relacionamento com o Usuário que fez a alteração
+  // Restrict: preserva o rastro de auditoria mesmo que o usuário deixe de existir
+  usuarioId     String   @map("usuario_id")
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  campoAlterado String   @map("campo_alterado") @db.VarChar(50)
+  valorAntigo   String?  @map("valor_antigo") @db.Text
+  valorNovo     String?  @map("valor_novo") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Índices para buscar histórico por OS, por usuário ou por data
+  @@index([ordemId])
+  @@index([usuarioId])
+  @@index([createdAt])
+  @@map("historico")
+}
+
+model LogAuditoria {
+  id         String   @id @default(uuid())
+
+  // Relacionamento com o Usuário
+  // SetNull: já é opcional (logs de sistema sem usuário logado), então ao apagar o usuário o log vira "log de sistema"
+  usuarioId  String?  @map("usuario_id")
+  usuario    Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  acao       String   @db.VarChar(50)
+  detalhes   Json?    // Prisma suporta JSON nativamente para detalhes flexíveis
+  ipOrigem   String?  @map("ip_origem") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Índices para buscar logs por usuário, ação ou data
+  @@index([usuarioId])
+  @@index([acao])
+  @@index([createdAt])
+  @@map("logs_auditoria")
+}
