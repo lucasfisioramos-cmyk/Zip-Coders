@@ -106,10 +106,10 @@ Funcionais, Requisitos Não Funcionais);
 
 | Prefixo | Uso | Exemplos |
 | :--- | :--- | :--- |
-| <feat> | Nova funcionalidade | feat(SCRUM-00, SCRUM-11): Adição de componentes com requisão única dentro do modal de cadastro de normas. |
-| <docs> | Documentação | docs(#N): atualizar documentação do projeto |
-| <fix> | Correção de um bug | fix(#N): corrigir erro no login |
-| <style> | Mudança de formatação, sem afetar o código | style(SCRUM-123): ajustar cores da interface |
-| <refactor> | Refatoração (sem alterar comportamento) | refactor(SCRUM-123): refatorar serviço de autenticação |
-| <test> | Criação ou alteração de testes | test(#N): adicionar testes unitários de login |
-| <chore> | Tarefas menores (dependências, configs, etc.) | chore(#N): atualizar dependências |
+| feat | Nova funcionalidade | feat(SCRUM-00, SCRUM-11): Adição de componentes com requisão única dentro do modal de cadastro de normas. |
+| docs | Documentação | docs(#N): atualizar documentação do projeto |
+| fix | Correção de um bug | fix(#N): corrigir erro no login |
+| style | Mudança de formatação, sem afetar o código | style(SCRUM-123): ajustar cores da interface |
+| refactor | Refatoração (sem alterar comportamento) | refactor(SCRUM-123): refatorar serviço de autenticação |
+| test | Criação ou alteração de testes | test(#N): adicionar testes unitários de login |
+| chore | Tarefas menores (dependências, configs, etc.) | chore(#N): atualizar dependências |
