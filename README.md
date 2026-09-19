@@ -87,41 +87,29 @@ Funcionais, Requisitos Não Funcionais);
 | 02                | dd/mm/aaaa | a fazer  | [MVP](MVP/sp2.md)  |
 | 03                | dd/mm/aaaa | a fazer  | [MVP](MVP/sp3.md)  |
 | Feira de Soluções | dd/mm/aaaa | a fazer  | [MVP](#)  |
+---
 
 # Padrão de Branches
 
-**Estratégia de Branch → GITHUB FLOW**
-
-Consiste em criar branchs de curta duração para as etapas e funcionalidades da aplicação. Ao concluir o objetivo daquela branch faz-se um PR, e ao concluir o rebase - da nova branch para a main - apaga-se ela do repositório remoto.
-
-| 
-
-| **Prefixo** | **Uso** | **Exemplo** | 
-| feature | Nova funcionalidade | feature/login-page | 
-| docs | Documentação | docs/documentacao-projeto | 
-| fix | Correção de um bug | fix/erro-login | 
-| style | Mudança de formatação, sem afetar o código | style/ajuste-cores | 
-| refactor | Refatoração do código, sem alterar funcionalidade | refactor/auth-service | 
-| test | Adiciona/Aplica ou modifica testes | test/login-unitario | 
-| chore | Atualizações menores que não impactam diretamente a funcionalidade | chore/atualizar-dependencias | 
+| Prefixo | Uso | Exemplos |
+| :--- | :--- | :--- |
+| feature | Nova funcionalidade | feature/login-page |
+| docs | Documentação | docs/documentacao-projeto |
+| fix | Correção de um bug | fix/erro-login |
+| style | Mudança de formatação, sem afetar o código | style/ajuste-cores |
+| refactor | Refatoração do código, sem alterar funcionalidade | refactor/auth-service |
+| test | Adiciona/Aplica ou modifica testes | test/login-unitario |
+| chore | Atualizações menores que não impactam diretamente a funcionalidade | chore/atualizar-dependencias |
+---
 
 # Padrão de Commit
 
-Evite commits grandes. Uma boa prática é fazer commits a cada funcionalidade feita, se a funcionalidade for grande, então commit a cada parte essencial dela.
-
-Feat, Style e Refactor Usar a Tag do Jira (SCRUM-número-da-task).
-
-Docs, fix, test e chore Verificar no histórico do GitHub o último commit com a mesma tag e incrementar +1.
-
-Github → chore #2): Atualizar dependências.
-
-O que você vai fazer → chore #3): Atualizar readme.
-
-| **Prefixo** | **Uso** | **Exemplo** | 
-| <feat> | Nova funcionalidade | feat(SCRUM-00, SCRUM-11): Adição de componentes com requisão única dentro do modal de cadastro de normas. | 
-| <docs> | Documentação | docs(#N): atualizar documentação do projeto | 
-| <fix> | Correção de um bug | fix(#N): corrigir erro no login | 
-| <style> | Mudança de formatação, sem afetar o código | style(SCRUM-123): ajustar cores da interface | 
-| <refactor> | Refatoração (sem alterar comportamento) | refactor(SCRUM-123): refatorar serviço de autenticação | 
-| <test> | Criação ou alteração de testes | test(#N): adicionar testes unitários de login | 
-| <chore> | Tarefas menores (dependências, configs, etc.) | chore(#N): atualizar dependências | 
+| Prefixo | Uso | Exemplos |
+| :--- | :--- | :--- |
+| <feat> | Nova funcionalidade | | <feat> | Nova funcionalidade | feat(SCRUM-00, SCRUM-11): Adição de componentes com requisão única dentro do modal de cadastro de normas. |  |
+| <docs> | Documentação | docs(#N): atualizar documentação do projeto |
+| <fix> | Correção de um bug | fix(#N): corrigir erro no login |
+| <style> | Mudança de formatação, sem afetar o código | style(SCRUM-123): ajustar cores da interface |
+| <refactor> | Refatoração (sem alterar comportamento) | refactor(SCRUM-123): refatorar serviço de autenticação |
+| <test> | Criação ou alteração de testes | test(#N): adicionar testes unitários de login |
+| <chore> | Tarefas menores (dependências, configs, etc.) | chore(#N): atualizar dependências |
