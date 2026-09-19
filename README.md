@@ -63,27 +63,65 @@ Funcionais, Requisitos Não Funcionais);
 | 1 | Alta | Como **usuário interno**, quero abrir uma ordem de serviço com descrição, prioridade e responsável, para iniciar o processo de manutenção sem depender de um perfil restrito e evitar gargalos. | 8 pontos | 1 |
 | 2 | Alta | Como **executor ou gestor responsável**, quero atualizar o status da ordem (em andamento, concluída, etc.) em um **quadro Kanban**, para manter o acompanhamento transparente e visual. | 5 pontos | 1 |
 | 3 | Alta | Como **gestor ou executor responsável**, quero encerrar uma ordem de serviço com registro de data e responsável, para garantir rastreabilidade e flexibilidade na condução. | 5 pontos | 1 |
-| 4 | Alta | Como **usuário interno**, quero consultar o histórico completo de uma ordem, para verificar todas as alterações realizadas. | 8 pontos | 2 |
-| 5 | Alta | Como sistema, devo notificar os envolvidos quando houver mudanças relevantes na ordem, para garantir comunicação eficiente. | 8 pontos | 2 |
+| 4 | Alta | Como **usuário interno**, quero consultar o histórico completo de uma ordem, para verificar todas as alterações realizadas. | 8 pontos | 1 |
+| 5 | Alta | Como sistema, devo notificar os envolvidos quando houver mudanças relevantes na ordem, para garantir comunicação eficiente. | 8 pontos | 1 |
 | 6 | Alta | Como administrador, quero manual de instalação disponível no Git, para facilitar implantação em ambiente de homologação. | 3 pontos | 1 |
 | 7 | Alta | Como **usuário interno**, quero manual de uso acessível, para aprender rapidamente a utilizar o sistema. | 3 pontos | 1 |
 | 8 | Alta | Como desenvolvedor, quero documentação da API (Swagger), para integrar facilmente com outros sistemas. | 5 pontos | 2 |
-| 9 | Média | Como gestor, quero definir prioridades nas ordens de serviço (urgência/criticidade), para otimizar recursos. | 8 pontos | 3 |
-| 10 | Média | Como sistema, devo registrar rastreabilidade das operações (log de auditoria), para garantir confiabilidade. | 8 pontos | 3 |
-| 11 | Média | Como **usuário interno**, quero uma interface intuitiva **baseada no método Kanban**, para visualizar o fluxo de trabalho de forma clara e reduzir a curva de aprendizado. | 13 pontos | 3 |
-| 12 | Média | Como gestor, quero relatórios de ordens abertas, em andamento e concluídas, para análise de desempenho. | 8 pontos | 4 |
-| 13 | Média | Como administrador, quero configurar perfis de acesso focados em **uso estritamente interno** (usuário padrão, executor, gestor, administrador), para garantir segurança sem expor a plataforma a clientes. | 8 pontos | 4 |
-| 14 | Baixa | Como **usuário interno**, quero pesquisar ordens por filtros avançados (responsável, prazo, status), para agilizar consultas. | 5 pontos | 5 |
-| 15 | Baixa | Como gestor, quero exportar relatórios em PDF/Excel, para compartilhar com a **equipe interna** (visto que nenhum cliente terá acesso ao sistema). | 5 pontos | 5 |
-| 16 | Baixa | Como administrador, quero configurar notificações personalizadas, para adequar às necessidades da empresa. | 8 pontos | 6 |
-| 17 | Baixa | Como sistema, devo suportar ambiente de homologação com capacidade limitada, para testes controlados. | 5 pontos | 6 |
+| 9 | Média | Como gestor, quero definir prioridades nas ordens de serviço (urgência/criticidade), para otimizar recursos. | 8 pontos | 2 |
+| 10 | Média | Como sistema, devo registrar rastreabilidade das operações (log de auditoria), para garantir confiabilidade. | 8 pontos | 2 |
+| 11 | Média | Como **usuário interno**, quero uma interface intuitiva **baseada no método Kanban**, para visualizar o fluxo de trabalho de forma clara e reduzir a curva de aprendizado. | 13 pontos | 2 |
+| 12 | Média | Como gestor, quero relatórios de ordens abertas, em andamento e concluídas, para análise de desempenho. | 8 pontos | 3 |
+| 13 | Média | Como administrador, quero configurar perfis de acesso focados em **uso estritamente interno** (usuário padrão, executor, gestor, administrador), para garantir segurança sem expor a plataforma a clientes. | 8 pontos | 3 |
+| 14 | Baixa | Como **usuário interno**, quero pesquisar ordens por filtros avançados (responsável, prazo, status), para agilizar consultas. | 5 pontos | 3 |
+| 15 | Baixa | Como gestor, quero exportar relatórios em PDF/Excel, para compartilhar com a **equipe interna** (visto que nenhum cliente terá acesso ao sistema). | 5 pontos | 3 |
+| 16 | Baixa | Como administrador, quero configurar notificações personalizadas, para adequar às necessidades da empresa. | 8 pontos | 3 |
+| 17 | Baixa | Como sistema, devo suportar ambiente de homologação com capacidade limitada, para testes controlados. | 5 pontos | 3 |
 ---
 
 # Registro das Sprints
 
 | Sprint            | Previsão   | Status   | Histórico |
 |-------------------|------------|----------|-----------|
-| 01                | dd/mm/aaaa | a fazer  | [MVP](MVP/sp1.md)  |
+| 01                | 20/09/2026 | a fazer  | [MVP](MVP/sp1.md)  |
 | 02                | dd/mm/aaaa | a fazer  | [MVP](MVP/sp2.md)  |
 | 03                | dd/mm/aaaa | a fazer  | [MVP](MVP/sp3.md)  |
 | Feira de Soluções | dd/mm/aaaa | a fazer  | [MVP](#)  |
+
+# Padrão de Branches
+
+**Estratégia de Branch → GITHUB FLOW**
+
+Consiste em criar branchs de curta duração para as etapas e funcionalidades da aplicação. Ao concluir o objetivo daquela branch faz-se um PR, e ao concluir o rebase - da nova branch para a main - apaga-se ela do repositório remoto.
+
+| 
+
+| **Prefixo** | **Uso** | **Exemplo** | 
+| `feature/` | Nova funcionalidade | `feature/login-page` | 
+| `docs/` | Documentação | `docs/documentacao-projeto` | 
+| `fix/` | Correção de um bug | `fix/erro-login` | 
+| `style/` | Mudança de formatação, sem afetar o código | `style/ajuste-cores` | 
+| `refactor/` | Refatoração do código, sem alterar funcionalidade | `refactor/auth-service` | 
+| `test/` | Adiciona/Aplica ou modifica testes | `test/login-unitario` | 
+| `chore/` | Atualizações menores que não impactam diretamente a funcionalidade | `chore/atualizar-dependencias` | 
+
+# Padrão de Commit
+
+Evite commits grandes. Uma boa prática é fazer commits a cada funcionalidade feita, se a funcionalidade for grande, então commit a cada parte essencial dela.
+
+`Feat, Style e Refactor` Usar a Tag do Jira (SCRUM-número-da-task).
+
+`Docs, fix, test e chore` Verificar no histórico do GitHub o último commit com a mesma tag e incrementar +1.
+
+Github → `chore` #2): Atualizar dependências.
+
+O que você vai fazer → `chore` #3): Atualizar readme.
+
+| **Prefixo** | **Uso** | **Exemplo** | 
+| `<feat>` | Nova funcionalidade | `feat(SCRUM-00, SCRUM-11): Adição de componentes com requisão única dentro do modal de cadastro de normas.` | 
+| `<docs>` | Documentação | `docs(#N): atualizar documentação do projeto` | 
+| `<fix>` | Correção de um bug | `fix(#N): corrigir erro no login` | 
+| `<style>` | Mudança de formatação, sem afetar o código | `style(SCRUM-123): ajustar cores da interface` | 
+| `<refactor>` | Refatoração (sem alterar comportamento) | `refactor(SCRUM-123): refatorar serviço de autenticação` | 
+| `<test>` | Criação ou alteração de testes | `test(#N): adicionar testes unitários de login` | 
+| `<chore>` | Tarefas menores (dependências, configs, etc.) | `chore(#N): atualizar dependências` | 
