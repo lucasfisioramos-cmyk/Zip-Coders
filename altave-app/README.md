@@ -1,5 +1,9 @@
 # Altave · Gestão de Ordens de Serviço
 
+Protótipo no Figma
+
+[Acessar Protótipo no Figma](https://www.figma.com/make/mcQgDpJewzB5mZ4RVuIVQS/Prot%C3%B3tipo?fullscreen=1&t=ML7VsGoeaTvey5mg-1&code-node-id=0-6)
+
 Protótipo funcional (React + Vite) do sistema interno de ordens de serviço da Altave.
 
 ## Como rodar
