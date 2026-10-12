@@ -81,12 +81,12 @@ Funcionais, Requisitos Não Funcionais);
 
 # Registro das Sprints
 
-| Sprint            | Previsão   | Status   | Histórico |
-|-------------------|------------|----------|-----------|
-| 01                | 20/09/2026 | a fazer  | [MVP](MVP/sp1.md)  |
-| 02                | dd/mm/aaaa | a fazer  | [MVP](MVP/sp2.md)  |
-| 03                | dd/mm/aaaa | a fazer  | [MVP](MVP/sp3.md)  |
-| Feira de Soluções | dd/mm/aaaa | a fazer  | [MVP](#)  |
+| Sprint            | Período   | Histórico |
+|-------------------|------------|-----------|
+| 01                | 07/09 a 27/09 | [MVP](MVP/sp1.md)  |
+| 02                | 05/10 a 25/10 | [MVP](MVP/sp2.md)  |
+| 03                | 02/11 a 27/11 | [MVP](MVP/sp3.md)  |
+| Feira de Soluções | 03/12 | [MVP](#)  |
 ---
 
 # Padrão de Branches
