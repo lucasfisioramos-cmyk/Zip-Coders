@@ -83,10 +83,10 @@ Funcionais, Requisitos Não Funcionais);
 
 | Sprint            | Período   | Histórico |
 |-------------------|------------|-----------|
-| 01                | 07/09 a 27/09 | [MVP](MVP/sp1.md)  |
-| 02                | 05/10 a 25/10 | [MVP](MVP/sp2.md)  |
-| 03                | 02/11 a 27/11 | [MVP](MVP/sp3.md)  |
-| Feira de Soluções | 03/12 | [MVP](#)  |
+| 01                | 07/09 a 27/09 | [sprint 1 docs](./docs-sprint/sprint1/README.md)  |
+| 02                | 05/10 a 25/10 | [sprint 2 docs](./docs-sprint/sprint2/README.md)  |
+| 03                | 02/11 a 27/11 | [sprint 3 docs](./docs-sprint/sprint3/README.md)  |
+| Feira de Soluções | 03/12 |  |
 ---
 
 # Padrão de Branches
