@@ -15,8 +15,8 @@ const ORDENS = [
   { codigo: 'OS-2026-0142', titulo: 'Porta de emergência com trava solta', descricao: 'Trava não engata corretamente.', prioridade: 'MEDIA', status: 'ABERTA', responsavel: 'carlos.dias@altave.com' },
   { codigo: 'OS-2026-0135', titulo: 'Manutenção preventiva no gerador principal', descricao: 'Revisão programada trimestral.', prioridade: 'ALTA', status: 'EM_ANDAMENTO', responsavel: 'joao.pedro@altave.com' },
   { codigo: 'OS-2026-0139', titulo: 'Ajuste no sistema de câmeras do estacionamento', descricao: 'Câmera 3 com foco desregulado.', prioridade: 'MEDIA', status: 'EM_ANDAMENTO', responsavel: 'ana.ferreira@altave.com' },
-  { codigo: 'OS-2026-0130', titulo: 'Troca de filtro do sistema de climatização', descricao: 'Troca de rotina.', prioridade: 'BAIXA', status: 'CONCLUIDA', responsavel: 'carlos.dias@altave.com' },
-  { codigo: 'OS-2026-0128', titulo: 'Reparo no sensor de presença da recepção', descricao: 'Sensor não detecta movimento.', prioridade: 'MEDIA', status: 'CONCLUIDA', responsavel: 'joao.pedro@altave.com' },
+  { codigo: 'OS-2026-0130', titulo: 'Troca de filtro do sistema de climatização', descricao: 'Troca de rotina.', prioridade: 'BAIXA', status: 'CONCLUIDA', responsavel: 'carlos.dias@altave.com', solucao: 'Filtro substituído e fluxo de ar verificado.' },
+  { codigo: 'OS-2026-0128', titulo: 'Reparo no sensor de presença da recepção', descricao: 'Sensor não detecta movimento.', prioridade: 'MEDIA', status: 'CONCLUIDA', responsavel: 'joao.pedro@altave.com', solucao: 'Sensor trocado e testado na recepção.' },
 ]
 
 async function run() {
@@ -45,6 +45,8 @@ async function run() {
         status: o.status,
         dataAbertura: new Date(),
         dataConclusao: concluida ? new Date() : null,
+        solucao: o.solucao || null,
+        encerradoPorId: concluida && o.responsavel ? ids[o.responsavel] : null,
         solicitanteId: solicitante,
         responsavelId: o.responsavel ? ids[o.responsavel] : null,
         historicos: { create: { usuarioId: solicitante, statusAnterior: null, statusNovo: o.status } },
@@ -58,3 +60,4 @@ async function run() {
 run()
   .catch((err) => { console.error(err); process.exit(1) })
   .finally(() => prisma.$disconnect())
+
