@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api.js'
 import NovaOrdemModal from '../components/NovaOrdemModal.jsx'
+import EncerrarOrdemModal from '../components/EncerrarOrdemModal.jsx'
+import HistoricoOrdemModal from '../components/HistoricoOrdemModal.jsx'
 import { IconCalendar } from '../components/icons.jsx'
 
 const COLUMNS = [
@@ -17,6 +19,8 @@ export default function Kanban({ user }) {
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [encerrando, setEncerrando] = useState(null) // ordem aguardando confirmação de encerramento
+  const [historicoOrdem, setHistoricoOrdem] = useState(null) // ordem com o painel de histórico aberto
   const [dragId, setDragId] = useState(null)
   const [overCol, setOverCol] = useState(null)
 
@@ -52,9 +56,31 @@ export default function Kanban({ user }) {
   }
 
   function handleDrop(colKey) {
-    if (dragId) moveOrder(dragId, colKey)
+    const ordem = orders.find((o) => o.id === dragId)
     setDragId(null)
     setOverCol(null)
+    if (!ordem || ordem.status === colKey) return
+    setErro('')
+
+    // Concluir exige o fluxo de encerramento (com a descrição da solução).
+    if (colKey === 'Concluída') {
+      if (ordem.podeEncerrar) setEncerrando(ordem)
+      else setErro('Somente o responsável pela ordem, um Gestor ou um Administrador pode encerrá-la.')
+      return
+    }
+    // Reabrir uma ordem concluída é restrito a Gestor/Administrador.
+    if (ordem.status === 'Concluída' && !ordem.podeReabrir) {
+      setErro('Somente Gestor ou Administrador pode reabrir uma ordem concluída.')
+      return
+    }
+    moveOrder(ordem.id, colKey)
+  }
+
+  // Lança o erro de volta pro modal, que mostra a mensagem sem fechar.
+  async function handleEncerrar(solucao) {
+    const atualizada = await api.closeOrder(encerrando.id, solucao)
+    setOrders((prev) => prev.map((o) => (o.id === atualizada.id ? atualizada : o)))
+    setEncerrando(null)
   }
 
   async function handleCreate(form) {
@@ -72,7 +98,7 @@ export default function Kanban({ user }) {
       <div className="page-head">
         <div>
           <h1>Quadro Kanban</h1>
-          <p className="page-sub">Acompanhe o andamento de todas as ordens de serviço abertas. Arraste um card para mudar o status ou reordenar.</p>
+          <p className="page-sub">Acompanhe o andamento de todas as ordens de serviço abertas. Arraste um card para mudar o status e clique nele para ver o histórico.</p>
         </div>
         <button className="btn-new" onClick={() => setShowModal(true)}>+ Nova ordem</button>
       </div>
@@ -112,6 +138,11 @@ export default function Kanban({ user }) {
                     key={o.id}
                     className={`kcard${dragId === o.id ? ' dragging' : ''}`}
                     draggable
+                    role="button"
+                    tabIndex={0}
+                    title="Clique para ver o histórico"
+                    onClick={() => setHistoricoOrdem(o)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) setHistoricoOrdem(o) }}
                     onDragStart={() => setDragId(o.id)}
                     onDragEnd={() => { setDragId(null); setOverCol(null) }}
                   >
@@ -125,11 +156,21 @@ export default function Kanban({ user }) {
                         <IconCalendar /> {o.vencida ? `Vencida em ${o.prazo}` : `Prazo: ${o.prazo || '—'}`}
                       </div>
                     ) : (
-                      <div className="kcard-meta done">{o.agingLabel}</div>
+                      <div className="kcard-meta done">{o.agingLabel}{o.encerradoPor ? ` por ${o.encerradoPor}` : ''}</div>
+                    )}
+                    {col.key === 'Concluída' && o.solucao && (
+                      <div className="kcard-solucao" title={o.solucao}>{o.solucao}</div>
                     )}
                     <div className="kcard-bottom">
                       {col.key !== 'Concluída' && <span className="kcard-aging">{o.agingLabel}</span>}
-                      <span className="kavatar" style={{ background: o.avatarColor || AVATAR_FALLBACK[o.avatar] || '#9aa4b2', marginLeft: 'auto' }}>{o.avatar}</span>
+                      <div className="kcard-right">
+                        {o.podeEncerrar && (
+                          <button type="button" className="btn-encerrar" onClick={(e) => { e.stopPropagation(); setEncerrando(o) }}>
+                            Encerrar
+                          </button>
+                        )}
+                        <span className="kavatar" style={{ background: o.avatarColor || AVATAR_FALLBACK[o.avatar] || '#9aa4b2' }}>{o.avatar}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -143,6 +184,8 @@ export default function Kanban({ user }) {
       )}
 
       {showModal && <NovaOrdemModal user={user} onClose={() => setShowModal(false)} onCreate={handleCreate} />}
+      {historicoOrdem && <HistoricoOrdemModal ordem={historicoOrdem} onClose={() => setHistoricoOrdem(null)} />}
+      {encerrando && <EncerrarOrdemModal ordem={encerrando} user={user} onClose={() => setEncerrando(null)} onConfirm={handleEncerrar} />}
     </div>
   )
 }

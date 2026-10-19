@@ -5,12 +5,26 @@ schema que você mandou: `usuarios`, `ordens_servico`, `historico`, `logs_audito
 
 ## Rotas
 - POST  /api/auth/login              { email, senha } -> { token, user }
-- GET   /api/ordens                  (Bearer token) filtros: ?status=&prioridade=&busca=
+- GET   /api/ordens                  (Bearer token) lista as OS; cada item traz `podeEncerrar` e `podeReabrir` para o usuário logado
 - POST  /api/ordens                  (Bearer token) { titulo, descricao, prioridade, responsavel }
-- PATCH /api/ordens/:codigo/status   (Bearer token) { status }
+- PATCH /api/ordens/:codigo/status   (Bearer token) { status } — apenas "Aberta" ou "Em andamento".
+                                     Reabrir uma OS concluída: somente GESTOR/ADMIN.
+- POST  /api/ordens/:codigo/encerrar (Bearer token) { solucao } — **único caminho para concluir uma OS**.
+                                     Exige `solucao` (10 a 5000 caracteres). Permitido ao responsável pela OS,
+                                     GESTOR ou ADMIN. 409 se a OS já estiver concluída.
+- GET   /api/ordens/:codigo/historico (Bearer token) linha do tempo da OS: { codigo, titulo, eventos: [{ tipo, de, para, quem, em, observacao }] },
+                                     do mais antigo ao mais recente. `tipo`: criacao | mudanca | encerramento | reabertura.
+- GET   /api/usuarios                (Bearer token)
+- POST  /api/usuarios                (GESTOR/ADMIN) { nome, email, senha, perfil }
+- PATCH /api/usuarios/:id/ativo      (GESTOR/ADMIN) { ativo }
 
-Toda mudança de status grava uma linha em `historico`, e login/criação/mudança de status
-gravam em `logs_auditoria`.
+Encerrar grava a `solucao` e o `encerradoPorId` (quem encerrou; a API devolve o nome em `encerradoPor`) na OS, uma linha em `historico` (com `observacao` = solução) e `encerrar_os`
+em `logs_auditoria`. Reabrir grava `reabrir_os`; outras mudanças de status gravam `mudar_status`.
+Criar OS grava `criar_os`.
+
+> Migrations: `20261008120000_encerramento_os` (colunas `ordens_servico.solucao` e `historico.observacao`) e
+> `20261008223000_encerrado_por` (coluna `ordens_servico.encerrado_por_id`, com preenchimento das OS já concluídas).
+> Rode `npx prisma migrate deploy` (ou `migrate dev`) antes de subir esta versão.
 
 ## Subir com o RDS da AWS
 
@@ -39,3 +53,4 @@ em `OrdemServico` no schema.prisma e rodar `npx prisma migrate dev` de novo — 
 
 Login agora é por **email** (não mais "usuario.sobrenome") — reflita isso na tela de login do front
 se ainda estiver pedindo "usuário".
+

@@ -50,6 +50,7 @@ model Usuario {
 
   ordensSolicitadas  OrdemServico[] @relation("OS_Solicitante")
   ordensResponsaveis OrdemServico[] @relation("OS_Responsavel")
+  ordensEncerradas   OrdemServico[] @relation("OS_EncerradoPor")
   historicos         Historico[]
   logsAuditoria      LogAuditoria[]
 
@@ -80,6 +81,12 @@ model OrdemServico {
   // (transição RASCUNHO -> ABERTA), não na criação do registro.
   dataAbertura  DateTime?    @map("data_abertura")
   dataConclusao DateTime?    @map("data_conclusao")
+
+  // Preenchidos no encerramento (POST /api/ordens/:codigo/encerrar).
+  // Ao reabrir a OS, encerradoPorId volta a null (a autoria continua no historico).
+  solucao         String?    @db.Text
+  encerradoPorId  String?    @map("encerrado_por_id")
+  encerradoPor    Usuario?   @relation("OS_EncerradoPor", fields: [encerradoPorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
 
@@ -89,6 +96,7 @@ model OrdemServico {
   @@index([prioridade])
   @@index([solicitanteId])
   @@index([responsavelId])
+  @@index([encerradoPorId])
   @@index([dataAbertura])
   @@map("ordens_servico")
 }
@@ -106,6 +114,9 @@ model Historico {
   // Agora só registramos a transição de status, tipada pelo próprio enum.
   statusAnterior StatusOS? @map("status_anterior") // null no primeiro registro (criação da requisição)
   statusNovo     StatusOS  @map("status_novo")
+
+  // Texto livre da transição (ex.: solução aplicada ao encerrar a OS).
+  observacao     String?   @db.Text
 
   createdAt      DateTime @default(now()) @map("created_at")
 
