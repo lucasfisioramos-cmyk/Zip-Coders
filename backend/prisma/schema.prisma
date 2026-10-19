@@ -35,6 +35,22 @@ enum PrioridadeOS {
   URGENTE
 }
 
+// Tipos de evento registrados na linha do tempo da OS
+enum TipoEventoOS {
+  CRIACAO
+  STATUS_ALTERADO
+  RESPONSAVEL_ALTERADO
+  CAMPO_ALTERADO        // título, descrição, prioridade (detalhes diz qual)
+  ERRO_VALIDACAO        // tentativa de abrir/avançar OS incompleta
+  ERRO_SISTEMA
+}
+
+enum SeveridadeEvento {
+  INFO
+  AVISO
+  ERRO
+}
+
 // ==========================================
 // MODELOS (Tabelas)
 // ==========================================
@@ -52,6 +68,7 @@ model Usuario {
   ordensResponsaveis OrdemServico[] @relation("OS_Responsavel")
   ordensEncerradas   OrdemServico[] @relation("OS_EncerradoPor")
   historicos         Historico[]
+  eventosOS          EventoOS[]
   logsAuditoria      LogAuditoria[]
 
   @@index([perfil])
@@ -91,6 +108,7 @@ model OrdemServico {
   updatedAt     DateTime     @updatedAt @map("updated_at")
 
   historicos    Historico[]
+  eventos       EventoOS[]
 
   @@index([status])
   @@index([prioridade])
@@ -101,6 +119,7 @@ model OrdemServico {
   @@map("ordens_servico")
 }
 
+// Transições de status (estruturado, bom para métricas)
 model Historico {
   id             String   @id @default(uuid())
 
@@ -110,8 +129,6 @@ model Historico {
   usuarioId      String   @map("usuario_id")
   usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  // Antes eram 3 campos genéricos (campoAlterado/valorAntigo/valorNovo).
-  // Agora só registramos a transição de status, tipada pelo próprio enum.
   statusAnterior StatusOS? @map("status_anterior") // null no primeiro registro (criação da requisição)
   statusNovo     StatusOS  @map("status_novo")
 
@@ -124,6 +141,33 @@ model Historico {
   @@index([usuarioId])
   @@index([createdAt])
   @@map("historico")
+}
+
+// Linha do tempo completa da OS + log de notificações (mudanças e erros relevantes)
+// Regra: só se insere, nunca se edita nem apaga pela aplicação.
+model EventoOS {
+  id         String           @id @default(uuid())
+
+  // Cascade: se a OS for apagada, sua linha do tempo vai junto
+  ordemId    String           @map("ordem_id")
+  ordem      OrdemServico     @relation(fields: [ordemId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  // Opcional: eventos gerados pelo próprio sistema não têm usuário
+  usuarioId  String?          @map("usuario_id")
+  usuario    Usuario?         @relation(fields: [usuarioId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  tipo       TipoEventoOS
+  severidade SeveridadeEvento @default(INFO)
+  mensagem   String           @db.VarChar(255)
+  detalhes   Json?            // ex: { campo, de, para } ou { pendencias: [...] }
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  // Índice principal da user story: eventos de uma OS em ordem cronológica
+  @@index([ordemId, createdAt])
+  @@index([severidade])
+  @@index([tipo])
+  @@index([usuarioId])
+  @@map("eventos_os")
 }
 
 model LogAuditoria {
