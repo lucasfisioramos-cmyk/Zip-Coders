@@ -51,6 +51,10 @@ O foco está na organização das informações de forma intuitiva e transparent
 | Integração com outras partes | A comunicação entre frontend e backend foi validada e a aplicação continua funcionando corretamente após a implementação. |
 | Validação do PO | O Product Owner valida se os dados apresentados atendem ao objetivo do sistema. |
 
+## MVP - Sprint 1
+
+[![Assista ao vídeo](https://img.youtube.com/vi/oOj7Xkrf7F0/0.jpg)](https://www.youtube.com/watch?v=oOj7Xkrf7F0)
+
 
 ## Equipe
 
