@@ -13,6 +13,8 @@ O foco está em entregar uma experiência visual fluida para os usuários intern
 
 ## Backlog da Sprint
 
+| Rank | Prioridade | User Story | Estimativa | Sprint |
+| :--- | :--- | :--- | :--- | :--- |
 | 8 | Alta | Como desenvolvedor, quero documentação da API (Swagger), para integrar facilmente com outros sistemas. | 5 pontos | 2 |
 | 9 | Média | Como gestor, quero definir prioridades nas ordens de serviço (urgência/criticidade), para otimizar recursos. | 8 pontos | 2 |
 | 10 | Média | Como sistema, devo registrar rastreabilidade das operações (log de auditoria), para garantir confiabilidade. | 8 pontos | 2 |
