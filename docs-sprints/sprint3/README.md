@@ -13,6 +13,8 @@ O foco desta última etapa é entregar uma plataforma robusta, segura e totalmen
 
 ## Backlog da Sprint
 
+| Rank | Prioridade | User Story | Estimativa | Sprint |
+| :--- | :--- | :--- | :--- | :--- |
 | 12 | Média | Como gestor, quero relatórios de ordens abertas, em andamento e concluídas, para análise de desempenho. | 8 pontos | 3 |
 | 13 | Média | Como administrador, quero configurar perfis de acesso focados em **uso estritamente interno** (usuário padrão, executor, gestor, administrador), para garantir segurança sem expor a plataforma a clientes. | 8 pontos | 3 |
 | 14 | Baixa | Como **usuário interno**, quero pesquisar ordens por filtros avançados (responsável, prazo, status), para agilizar consultas. | 5 pontos | 3 |
