@@ -89,10 +89,6 @@ Funcionais, Requisitos Não Funcionais);
 | Feira de Soluções | 03/12 |  |
 ---
 
-## MVP - Sprint 1
-
-[![Assista ao vídeo](https://img.youtube.com/vi/oOj7Xkrf7F0/0.jpg)](https://www.youtube.com/watch?v=oOj7Xkrf7F0)
-
 # Padrão de Branches
 
 | Prefixo | Uso | Exemplos |
