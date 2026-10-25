@@ -45,6 +45,11 @@ function podeReabrir(user, o) {
   return o.status === 'CONCLUIDA' && isGestor(user)
 }
 
+// Só Gestor/Administrador define ou muda a prioridade, e só enquanto a OS não está concluída.
+function podeAlterarPrioridade(user, o) {
+  return o.status !== 'CONCLUIDA' && isGestor(user)
+}
+
 function toApi(o, user) {
   return {
     id: o.codigo,
@@ -63,6 +68,7 @@ function toApi(o, user) {
     solucao: o.solucao,
     podeEncerrar: podeEncerrar(user, o),
     podeReabrir: podeReabrir(user, o),
+    podeAlterarPrioridade: podeAlterarPrioridade(user, o),
   }
 }
 
@@ -88,6 +94,10 @@ async function nextCodigo() {
 router.post('/', asyncHandler(async (req, res) => {
   const { titulo, descricao, prioridade, responsavel } = req.body || {}
   if (!titulo) return res.status(400).json({ erro: 'Título é obrigatório.' })
+  const prioridadeDb = PRIORIDADE_API_TO_DB[prioridade]
+  if (!prioridadeDb) {
+    return res.status(400).json({ erro: 'Prioridade é obrigatória (Baixa, Média, Alta ou Urgente).' })
+  }
 
   let responsavelId = null
   if (responsavel && responsavel !== 'Não atribuído') {
@@ -101,7 +111,7 @@ router.post('/', asyncHandler(async (req, res) => {
       codigo,
       titulo,
       descricao: descricao || '',
-      prioridade: PRIORIDADE_API_TO_DB[prioridade] || 'MEDIA',
+      prioridade: prioridadeDb,
       status: 'ABERTA',
       dataAbertura: new Date(),
       solicitanteId: req.user.id,
@@ -192,6 +202,59 @@ router.patch('/:codigo/status', asyncHandler(async (req, res) => {
         usuarioId: req.user.id,
         acao: reabrindo ? 'reabrir_os' : 'mudar_status',
         detalhes: { codigo: atual.codigo, de: atual.status, para: statusDb },
+        ipOrigem: req.ip,
+      },
+    }),
+  ])
+
+  res.json(toApi(ordem, req.user))
+}))
+
+// PATCH /api/ordens/:codigo/prioridade  { prioridade }
+// Gestor/Administrador muda a prioridade. Fica registrado na linha do tempo (EventoOS) e na auditoria.
+router.patch('/:codigo/prioridade', asyncHandler(async (req, res) => {
+  const prioridadeDb = PRIORIDADE_API_TO_DB[req.body?.prioridade]
+  if (!prioridadeDb) {
+    return res.status(400).json({ erro: 'Prioridade inválida (Baixa, Média, Alta ou Urgente).' })
+  }
+
+  const atual = await prisma.ordemServico.findUnique({ where: { codigo: req.params.codigo } })
+  if (!atual) return res.status(404).json({ erro: 'Ordem não encontrada.' })
+  if (!isGestor(req.user)) {
+    return res.status(403).json({ erro: 'Somente Gestor ou Administrador pode alterar a prioridade.' })
+  }
+  if (atual.status === 'CONCLUIDA') {
+    return res.status(409).json({ erro: 'Não é possível alterar a prioridade de uma ordem concluída.' })
+  }
+
+  if (atual.prioridade === prioridadeDb) {
+    const igual = await prisma.ordemServico.findUnique({ where: { codigo: atual.codigo }, include: INCLUDE_OS })
+    return res.json(toApi(igual, req.user))
+  }
+
+  const de = PRIORIDADE_DB_TO_API[atual.prioridade] || null
+  const para = PRIORIDADE_DB_TO_API[prioridadeDb]
+  const [ordem] = await prisma.$transaction([
+    prisma.ordemServico.update({
+      where: { codigo: atual.codigo },
+      data: {
+        prioridade: prioridadeDb,
+        eventos: {
+          create: {
+            usuarioId: req.user.id,
+            tipo: 'CAMPO_ALTERADO',
+            mensagem: `Prioridade alterada de ${de || 'não definida'} para ${para}`,
+            detalhes: { campo: 'prioridade', de: atual.prioridade, para: prioridadeDb },
+          },
+        },
+      },
+      include: INCLUDE_OS,
+    }),
+    prisma.logAuditoria.create({
+      data: {
+        usuarioId: req.user.id,
+        acao: 'mudar_prioridade',
+        detalhes: { codigo: atual.codigo, de: atual.prioridade, para: prioridadeDb },
         ipOrigem: req.ip,
       },
     }),

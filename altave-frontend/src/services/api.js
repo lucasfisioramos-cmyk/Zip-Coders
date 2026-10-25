@@ -19,6 +19,7 @@ export const api = {
   listOrders: (params) => http.get('/ordens', { params }).then((r) => r.data),
   createOrder: (data) => http.post('/ordens', data).then((r) => r.data),
   updateOrderStatus: (id, status) => http.patch(`/ordens/${id}/status`, { status }).then((r) => r.data),
+  updateOrderPriority: (id, prioridade) => http.patch(`/ordens/${id}/prioridade`, { prioridade }).then((r) => r.data),
   getOrderHistory: (id) => http.get(`/ordens/${id}/historico`).then((r) => r.data),
   closeOrder: (id, solucao) => http.post(`/ordens/${id}/encerrar`, { solucao }).then((r) => r.data),
   listUsers: () => http.get('/usuarios').then((r) => r.data),

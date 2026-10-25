@@ -15,8 +15,8 @@ export const STATUS_API_TO_DB = {
 // Colunas que o quadro Kanban do front mostra hoje.
 export const STATUS_KANBAN_DB = ['ABERTA', 'EM_ANDAMENTO', 'CONCLUIDA']
 
-export const PRIORIDADE_DB_TO_API = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', URGENTE: 'Alta' }
-export const PRIORIDADE_API_TO_DB = { Baixa: 'BAIXA', Média: 'MEDIA', Alta: 'ALTA' }
+export const PRIORIDADE_DB_TO_API = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', URGENTE: 'Urgente' }
+export const PRIORIDADE_API_TO_DB = { Baixa: 'BAIXA', Média: 'MEDIA', Alta: 'ALTA', Urgente: 'URGENTE' }
 
 export const PERFIL_LABEL = { ADMIN: 'Administrador', GESTOR: 'Gestor', EXECUTOR: 'Técnico', USUARIO: 'Usuário' }
 

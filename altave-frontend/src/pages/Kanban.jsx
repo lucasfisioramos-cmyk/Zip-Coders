@@ -11,6 +11,8 @@ const COLUMNS = [
   { key: 'Concluída', label: 'Concluída', dot: '#1f9d55' },
 ]
 
+const PRIORIDADES = ['Urgente', 'Alta', 'Média', 'Baixa']
+
 const AVATAR_FALLBACK = { CD: '#2E86D8', JP: '#D99A2B', AF: '#1F9D55', '?': '#8A94A3' }
 
 export default function Kanban({ user }) {
@@ -18,6 +20,7 @@ export default function Kanban({ user }) {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
+  const [filtroPrioridade, setFiltroPrioridade] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [encerrando, setEncerrando] = useState(null) // ordem aguardando confirmação de encerramento
   const [historicoOrdem, setHistoricoOrdem] = useState(null) // ordem com o painel de histórico aberto
@@ -40,8 +43,22 @@ export default function Kanban({ user }) {
   }
 
   const filtered = orders.filter((o) =>
-    o.title.toLowerCase().includes(busca.toLowerCase()) || o.id.toLowerCase().includes(busca.toLowerCase())
+    (o.title.toLowerCase().includes(busca.toLowerCase()) || o.id.toLowerCase().includes(busca.toLowerCase())) &&
+    (!filtroPrioridade || o.priority === filtroPrioridade)
   )
+
+  async function changePriority(id, prioridade) {
+    const anterior = orders
+    setErro('')
+    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, priority: prioridade } : o))) // otimista
+    try {
+      const atualizado = await api.updateOrderPriority(id, prioridade)
+      setOrders((prev) => prev.map((o) => (o.id === id ? atualizado : o)))
+    } catch (err) {
+      setOrders(anterior)
+      setErro(err.response?.data?.erro || 'Não foi possível alterar a prioridade.')
+    }
+  }
 
   async function moveOrder(id, newStatus) {
     const anterior = orders
@@ -108,7 +125,10 @@ export default function Kanban({ user }) {
       <div className="filters">
         <input placeholder="Buscar por título ou número da OS" value={busca} onChange={(e) => setBusca(e.target.value)} />
         <select><option>Responsável: todos</option></select>
-        <select><option>Prioridade: todas</option></select>
+        <select value={filtroPrioridade} onChange={(e) => setFiltroPrioridade(e.target.value)}>
+          <option value="">Prioridade: todas</option>
+          {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
         <select><option>Prazo: qualquer</option></select>
       </div>
 
@@ -136,7 +156,7 @@ export default function Kanban({ user }) {
                 {items.map((o) => (
                   <div
                     key={o.id}
-                    className={`kcard${dragId === o.id ? ' dragging' : ''}`}
+                    className={`kcard prio-${o.priority}${dragId === o.id ? ' dragging' : ''}`}
                     draggable
                     role="button"
                     tabIndex={0}
@@ -148,7 +168,21 @@ export default function Kanban({ user }) {
                   >
                     <div className="kcard-top">
                       <span className="kcard-id">{o.id}</span>
-                      <span className={`badge ${o.priority}`}>{o.priority}</span>
+                      {o.podeAlterarPrioridade ? (
+                        <select
+                          className={`badge badge-select ${o.priority}`}
+                          value={o.priority}
+                          title="Alterar prioridade"
+                          draggable={false}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          onChange={(e) => changePriority(o.id, e.target.value)}
+                        >
+                          {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      ) : (
+                        <span className={`badge ${o.priority}`}>{o.priority}</span>
+                      )}
                     </div>
                     <div className="kcard-title">{o.title}</div>
                     {col.key !== 'Concluída' ? (
