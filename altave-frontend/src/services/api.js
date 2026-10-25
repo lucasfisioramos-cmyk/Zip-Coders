@@ -18,6 +18,7 @@ export const api = {
   login: (email, senha) => http.post('/auth/login', { email, senha }).then((r) => r.data),
   listOrders: (params) => http.get('/ordens', { params }).then((r) => r.data),
   createOrder: (data) => http.post('/ordens', data).then((r) => r.data),
+  updateOrder: (id, data) => http.patch(`/ordens/${id}`, data).then((r) => r.data),
   updateOrderStatus: (id, status) => http.patch(`/ordens/${id}/status`, { status }).then((r) => r.data),
   getOrderHistory: (id) => http.get(`/ordens/${id}/historico`).then((r) => r.data),
   closeOrder: (id, solucao) => http.post(`/ordens/${id}/encerrar`, { solucao }).then((r) => r.data),

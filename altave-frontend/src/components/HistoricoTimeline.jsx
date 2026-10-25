@@ -4,6 +4,7 @@ export function tituloEvento(e) {
   switch (e.tipo) {
     case 'criacao': return e.para === 'Aberta' ? 'Ordem criada' : `Ordem registrada como ${e.para}`
     case 'encerramento': return 'Ordem encerrada'
+    case 'edicao': return 'Ordem editada'
     case 'reabertura': return `Ordem reaberta como ${e.para}`
     default: return `Movida de ${e.de} para ${e.para}`
   }
@@ -34,7 +35,7 @@ export default function HistoricoTimeline({ eventos }) {
             </div>
             {e.observacao && (
               <div className="tl-obs">
-                <span className="tl-obs-label">{e.tipo === 'encerramento' ? 'Solução aplicada' : 'Observação'}</span>
+                <span className="tl-obs-label">{e.tipo === 'encerramento' ? 'Solução aplicada' : e.tipo === 'edicao' ? 'Alterações' : 'Observação'}</span>
                 {e.observacao}
               </div>
             )}
