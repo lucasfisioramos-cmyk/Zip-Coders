@@ -6,6 +6,7 @@ import Kanban from './pages/Kanban.jsx'
 import Relatorios from './pages/Relatorios.jsx'
 import Manual from './pages/Manual.jsx'
 import Usuarios from './pages/Usuarios.jsx'
+import Historico from './pages/Historico.jsx'
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/kanban" replace />} />
         <Route path="/kanban" element={<Kanban user={user} />} />
         <Route path="/relatorios" element={<Relatorios />} />
+        <Route path="/historico/:codigo" element={<Historico />} />
         <Route path="/manual" element={<Manual />} />
                <Route path="/usuarios" element={['ADMIN', 'GESTOR'].includes(user.perfil) ? <Usuarios /> : <Navigate to="/kanban" replace />} />
       </Route>
