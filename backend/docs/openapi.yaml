@@ -1,0 +1,452 @@
+openapi: 3.0.3
+info:
+  title: Altave API - Zip Coders
+  description: >
+    API para gestão de ordens de serviço (OS): abertura, quadro Kanban,
+    encerramento com solução, histórico (linha do tempo) e gerenciamento de usuários.
+    Uso interno.
+
+
+    **Como autenticar:** faça login em `POST /auth/login`, copie o `token` da resposta,
+    clique em **Authorize** (cadeado) no topo desta página e cole o token.
+    O token expira em 8 horas.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3001/api
+    description: Ambiente local
+
+tags:
+  - name: Sistema
+    description: Verificação de funcionamento
+  - name: Autenticação
+    description: Login
+  - name: Ordens de Serviço
+    description: Abertura, Kanban, encerramento e histórico das OS
+  - name: Usuários
+    description: Cadastro e gerenciamento de usuários
+
+paths:
+  /health:
+    get:
+      tags: [Sistema]
+      summary: Verifica se a API está no ar
+      responses:
+        '200':
+          description: API funcionando
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+
+  /auth/login:
+    post:
+      tags: [Autenticação]
+      summary: Faz login e retorna o token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, senha]
+              properties:
+                email: { type: string, format: email, example: maria@empresa.com }
+                senha: { type: string, format: password, example: minhasenha123 }
+      responses:
+        '200':
+          description: Login realizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Token JWT (válido por 8h). Envie em `Authorization Bearer <token>`.
+                  user: { $ref: '#/components/schemas/UsuarioLogado' }
+        '400':
+          description: Email ou senha não informados
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '401':
+          description: Email ou senha inválidos, ou usuário inativo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /ordens:
+    get:
+      tags: [Ordens de Serviço]
+      summary: Lista as OS do quadro Kanban
+      description: Retorna as ordens exibidas no Kanban, da mais recente para a mais antiga.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Lista de ordens
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Ordem' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+    post:
+      tags: [Ordens de Serviço]
+      summary: Abre uma nova OS
+      description: >
+        Cria a OS com status inicial "Aberta", gera o código automaticamente
+        (formato `OS-AAAA-0001`) e registra o primeiro evento no histórico.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrdemCreate' }
+      responses:
+        '201':
+          description: OS criada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ordem' }
+        '400':
+          description: Título é obrigatório
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+
+  /ordens/{codigo}/historico:
+    get:
+      tags: [Ordens de Serviço]
+      summary: Linha do tempo da OS
+      description: >
+        Eventos da OS, do mais antigo para o mais recente: criação, mudanças de status,
+        encerramento e reabertura. Qualquer usuário autenticado pode consultar.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/CodigoPath' }]
+      responses:
+        '200':
+          description: Histórico da OS
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Historico' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '404': { $ref: '#/components/responses/OrdemNaoEncontrada' }
+
+  /ordens/{codigo}/status:
+    patch:
+      tags: [Ordens de Serviço]
+      summary: Muda o status da OS (mover card no Kanban)
+      description: >
+        Move a OS entre as colunas do Kanban.
+        **Não aceita "Concluída"**: para concluir use `POST /ordens/{codigo}/encerrar`.
+        Reabrir uma OS concluída só é permitido para Gestor ou Administrador.
+        Soltar o card na mesma coluna não gera alteração.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/CodigoPath' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  description: Nome do status como exibido no Kanban.
+                  example: Em andamento
+      responses:
+        '200':
+          description: Status atualizado (ou sem mudança)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ordem' }
+        '400':
+          description: Status inválido, ou tentativa de concluir sem usar o encerramento
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '403':
+          description: Somente Gestor ou Administrador pode reabrir uma OS concluída
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '404': { $ref: '#/components/responses/OrdemNaoEncontrada' }
+
+  /ordens/{codigo}/encerrar:
+    post:
+      tags: [Ordens de Serviço]
+      summary: Encerra a OS com a solução aplicada
+      description: >
+        Único caminho para concluir uma OS. Exige a descrição da solução (10 a 5000 caracteres).
+        Só o responsável pela OS, um Gestor ou um Administrador pode encerrar.
+        Só OS "Aberta" ou "Em andamento" podem ser encerradas.
+        Registra data de conclusão, quem encerrou e o evento no histórico.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/CodigoPath' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [solucao]
+              properties:
+                solucao:
+                  type: string
+                  minLength: 10
+                  maxLength: 5000
+                  example: Substituída a fonte de alimentação e testado o equipamento por 30 minutos.
+      responses:
+        '200':
+          description: OS encerrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ordem' }
+        '400':
+          description: Solução muito curta (menos de 10 caracteres) ou longa demais (mais de 5000)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '403':
+          description: Usuário sem permissão para encerrar esta OS
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '404': { $ref: '#/components/responses/OrdemNaoEncontrada' }
+        '409':
+          description: A OS já foi encerrada ou não está aberta/em andamento
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /usuarios:
+    get:
+      tags: [Usuários]
+      summary: Lista todos os usuários
+      description: Ordenados por nome. Qualquer usuário autenticado pode consultar.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Usuario' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+    post:
+      tags: [Usuários]
+      summary: Cadastra um novo usuário
+      description: Somente Gestor ou Administrador.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UsuarioCreate' }
+      responses:
+        '201':
+          description: Usuário criado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Usuario' }
+        '400':
+          description: Campos obrigatórios ausentes, senha com menos de 8 caracteres ou perfil inválido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '403':
+          description: Sem permissão para gerenciar usuários
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '409':
+          description: Já existe um usuário com esse email
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /usuarios/{id}/ativo:
+    patch:
+      tags: [Usuários]
+      summary: Ativa ou desativa um usuário
+      description: Usuários são desativados em vez de excluídos. Somente Gestor ou Administrador.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID (UUID) do usuário
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ativo]
+              properties:
+                ativo: { type: boolean, example: false }
+      responses:
+        '200':
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Usuario' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '403':
+          description: Sem permissão para gerenciar usuários
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token obtido em `POST /auth/login`.
+
+  parameters:
+    CodigoPath:
+      in: path
+      name: codigo
+      required: true
+      description: Código da OS (não é um número, tem o formato OS-AAAA-0001)
+      schema: { type: string }
+      example: OS-2026-0001
+
+  schemas:
+    Erro:
+      type: object
+      properties:
+        erro: { type: string, example: Ordem não encontrada. }
+
+    OrdemCreate:
+      type: object
+      required: [titulo]
+      properties:
+        titulo: { type: string, maxLength: 150, example: Computador da recepção não liga }
+        descricao: { type: string, example: Ao apertar o botão nada acontece. }
+        prioridade:
+          type: string
+          description: Se omitida ou inválida, assume "Média".
+          example: Alta
+        responsavel:
+          type: string
+          description: Nome exato de um usuário cadastrado. Se omitido ou não encontrado, a OS fica "Não atribuído".
+          example: João Silva
+
+    Ordem:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Código da OS (usado nas rotas como `{codigo}`)
+          example: OS-2026-0001
+        title: { type: string, example: Computador da recepção não liga }
+        descricao: { type: string }
+        priority: { type: string, example: Alta }
+        status: { type: string, example: Em andamento }
+        responsavel: { type: string, example: João Silva }
+        avatar: { type: string, description: Iniciais do responsável, example: JS }
+        avatarColor: { type: string, example: '#4f7cff' }
+        abertaEm: { type: string, nullable: true, description: Data no formato dd/mm/aaaa, example: 24/10/2026 }
+        concluidaEm: { type: string, nullable: true, example: null }
+        encerradoPor: { type: string, nullable: true, example: null }
+        solicitante: { type: string, nullable: true, example: Maria Souza }
+        agingLabel: { type: string, example: Em andamento há 2 dias }
+        solucao: { type: string, nullable: true }
+        podeEncerrar:
+          type: boolean
+          description: Se o usuário logado pode encerrar esta OS
+        podeReabrir:
+          type: boolean
+          description: Se o usuário logado pode reabrir esta OS
+
+    Historico:
+      type: object
+      properties:
+        codigo: { type: string, example: OS-2026-0001 }
+        titulo: { type: string }
+        eventos:
+          type: array
+          items: { $ref: '#/components/schemas/EventoHistorico' }
+
+    EventoHistorico:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tipo:
+          type: string
+          enum: [criacao, mudanca, encerramento, reabertura]
+        de: { type: string, nullable: true, description: Status anterior (nulo na criação) }
+        para: { type: string, description: Novo status, example: Em andamento }
+        quem: { type: string, description: Nome de quem fez a alteração }
+        avatar: { type: string, example: MS }
+        avatarColor: { type: string, example: '#4f7cff' }
+        em: { type: string, format: date-time, description: Data e hora em formato ISO }
+        observacao:
+          type: string
+          nullable: true
+          description: Texto livre (no encerramento, é a solução aplicada)
+
+    UsuarioLogado:
+      type: object
+      properties:
+        id: { type: string, description: Iniciais do usuário, example: MS }
+        dbId: { type: string, format: uuid }
+        name: { type: string, example: Maria Souza }
+        email: { type: string, format: email }
+        role: { type: string, description: Nome do perfil para exibição, example: Gestor }
+        perfil:
+          type: string
+          enum: [ADMIN, GESTOR, EXECUTOR, USUARIO]
+        color: { type: string, example: '#4f7cff' }
+
+    UsuarioCreate:
+      type: object
+      required: [nome, email, senha, perfil]
+      properties:
+        nome: { type: string, maxLength: 100, example: João Silva }
+        email: { type: string, format: email, maxLength: 100, example: joao@empresa.com }
+        senha: { type: string, format: password, minLength: 8, example: senhaforte123 }
+        perfil:
+          type: string
+          enum: [ADMIN, GESTOR, EXECUTOR, USUARIO]
+
+    Usuario:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: João Silva }
+        email: { type: string, format: email }
+        role: { type: string, example: Executor }
+        perfil:
+          type: string
+          enum: [ADMIN, GESTOR, EXECUTOR, USUARIO]
+        ativo: { type: boolean, example: true }
+        avatar: { type: string, example: JS }
+        avatarColor: { type: string, example: '#4f7cff' }
+        criadoEm: { type: string, format: date-time }
+
+  responses:
+    NaoAutenticado:
+      description: Token ausente, inválido ou expirado
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+    OrdemNaoEncontrada:
+      description: Ordem não encontrada
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
