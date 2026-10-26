@@ -5,14 +5,14 @@ const today = new Date().toLocaleDateString('pt-BR')
 
 export default function NovaOrdemModal({ user, onClose, onCreate }) {
   const [form, setForm] = useState({
-    titulo: '', descricao: '', prioridade: 'Alta', responsavel: 'Não atribuído', prazo: '',
+    titulo: '', descricao: '', prioridade: '', responsavel: 'Não atribuído', prazo: '',
   })
 
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })) }
 
   function handleSubmit(e) {
     e.preventDefault()
-    if (!form.titulo.trim()) return
+    if (!form.titulo.trim() || !form.prioridade) return
     onCreate(form)
   }
 
@@ -38,9 +38,10 @@ export default function NovaOrdemModal({ user, onClose, onCreate }) {
             </div>
             <div className="modal-row">
               <div className="field">
-                <label>Prioridade</label>
-                <select value={form.prioridade} onChange={(e) => set('prioridade', e.target.value)}>
-                  <option>Alta</option><option>Média</option><option>Baixa</option>
+                <label>Prioridade *</label>
+                <select required value={form.prioridade} onChange={(e) => set('prioridade', e.target.value)}>
+                  <option value="" disabled>Selecione...</option>
+                  <option>Urgente</option><option>Alta</option><option>Média</option><option>Baixa</option>
                 </select>
               </div>
               <div className="field">
