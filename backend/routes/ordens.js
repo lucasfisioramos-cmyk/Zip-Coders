@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
+import { enviarEmail } from '../lib/email.js'
 import {
   STATUS_DB_TO_API, STATUS_API_TO_DB, STATUS_KANBAN_DB,
   PRIORIDADE_DB_TO_API, PRIORIDADE_API_TO_DB,
@@ -133,6 +134,7 @@ router.post('/', asyncHandler(async (req, res) => {
 // Qualquer usuário autenticado pode consultar, assim como já pode ver a OS no quadro.
 function tipoEvento(h) {
   if (!h.statusAnterior) return 'criacao'
+  if (h.statusAnterior === h.statusNovo) return 'edicao' // edição de campos: status não muda
   if (h.statusNovo === 'CONCLUIDA') return 'encerramento'
   if (h.statusAnterior === 'CONCLUIDA') return 'reabertura'
   return 'mudanca'
@@ -160,6 +162,80 @@ router.get('/:codigo/historico', asyncHandler(async (req, res) => {
       observacao: h.observacao,
     })),
   })
+}))
+
+// PATCH /api/ordens/:codigo  { titulo?, descricao?, prioridade?, responsavel?, motivo }
+// Edita campos da OS. `motivo` é obrigatório: vai para o histórico e para o e-mail dos envolvidos.
+router.patch('/:codigo', asyncHandler(async (req, res) => {
+  const { titulo, descricao, prioridade, responsavel } = req.body || {}
+  const motivo = typeof req.body?.motivo === 'string' ? req.body.motivo.trim() : ''
+  if (motivo.length < 5) return res.status(400).json({ erro: 'Informe a breve descrição da alteração (mínimo de 5 caracteres).' })
+  if (motivo.length > 1000) return res.status(400).json({ erro: 'A descrição da alteração é longa demais (máximo de 1000 caracteres).' })
+  if (titulo !== undefined && (!String(titulo).trim() || String(titulo).length > 150)) {
+    return res.status(400).json({ erro: 'Título é obrigatório (máximo de 150 caracteres).' })
+  }
+  if (prioridade !== undefined && !PRIORIDADE_API_TO_DB[prioridade]) return res.status(400).json({ erro: 'Prioridade inválida.' })
+
+  const atual = await prisma.ordemServico.findUnique({
+    where: { codigo: req.params.codigo },
+    include: { responsavel: true, historicos: { select: { usuarioId: true } } },
+  })
+  if (!atual) return res.status(404).json({ erro: 'Ordem não encontrada.' })
+  if (!podeEditar(req.user, atual)) {
+    return res.status(403).json({ erro: 'Você não pode editar esta ordem (ou ela já foi concluída).' })
+  }
+
+  // novoResp: undefined = não mexe; null = sem responsável; objeto = novo responsável
+  let novoResp
+  if (responsavel !== undefined) {
+    novoResp = responsavel === 'Não atribuído' ? null : await prisma.usuario.findFirst({ where: { nome: responsavel, ativo: true } })
+    if (novoResp === null && responsavel !== 'Não atribuído') return res.status(400).json({ erro: 'Responsável não encontrado.' })
+  }
+
+  // Diff: só entra o que de fato mudou. Prioridade compara pelo rótulo da API (URGENTE aparece como "Alta").
+  const data = {}
+  const mudancas = []
+  const muda = (campo, de, para) => mudancas.push(`${campo}: "${de || '—'}" → "${para || '—'}"`)
+  if (titulo !== undefined && titulo.trim() !== atual.titulo) { data.titulo = titulo.trim(); muda('Título', atual.titulo, data.titulo) }
+  if (descricao !== undefined && descricao !== atual.descricao) { data.descricao = descricao; muda('Descrição', atual.descricao, descricao) }
+  const prioAtual = PRIORIDADE_DB_TO_API[atual.prioridade]
+  if (prioridade !== undefined && prioridade !== prioAtual) { data.prioridade = PRIORIDADE_API_TO_DB[prioridade]; muda('Prioridade', prioAtual, prioridade) }
+  if (novoResp !== undefined && (novoResp?.id ?? null) !== atual.responsavelId) {
+    data.responsavelId = novoResp?.id ?? null
+    muda('Responsável', atual.responsavel?.nome || 'Não atribuído', novoResp?.nome || 'Não atribuído')
+  }
+  if (!mudancas.length) return res.status(400).json({ erro: 'Nenhuma alteração para salvar.' })
+
+  const resumo = mudancas.join('\n')
+  const [ordem] = await prisma.$transaction([
+    prisma.ordemServico.update({
+      where: { codigo: atual.codigo },
+      data: {
+        ...data,
+        // status igual nos dois lados = evento de edição na linha do tempo
+        historicos: { create: { usuarioId: req.user.id, statusAnterior: atual.status, statusNovo: atual.status, observacao: `${resumo}\nMotivo: ${motivo}` } },
+      },
+      include: INCLUDE_OS,
+    }),
+    prisma.logAuditoria.create({
+      data: { usuarioId: req.user.id, acao: 'editar_os', detalhes: { codigo: atual.codigo, mudancas, motivo }, ipOrigem: req.ip },
+    }),
+  ])
+
+  // Envolvidos: solicitante, responsável (antigo e novo) e quem já aparece no histórico. O autor não recebe.
+  const ids = new Set([atual.solicitanteId, atual.responsavelId, ordem.responsavelId, ...atual.historicos.map((h) => h.usuarioId)])
+  ids.delete(null)
+  ids.delete(req.user.id)
+  // E-mail depois do commit e sem await da resposta: falha de SMTP não desfaz a edição.
+  prisma.usuario.findMany({ where: { id: { in: [...ids] }, ativo: true }, select: { email: true } })
+    .then((us) => enviarEmail({
+      to: us.map((u) => u.email),
+      subject: `[Altave] ${atual.codigo} foi alterada`,
+      text: `A ordem ${atual.codigo} (${ordem.titulo}) foi alterada por ${req.user.nome}.\n\nO que mudou:\n${resumo}\n\nMotivo: ${motivo}`,
+    }))
+    .catch((err) => console.error(`Falha ao enviar e-mail da ${atual.codigo}:`, err.message))
+
+  res.json(toApi(ordem, req.user))
 }))
 
 router.patch('/:codigo/status', asyncHandler(async (req, res) => {

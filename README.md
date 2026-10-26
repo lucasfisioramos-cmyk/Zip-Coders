@@ -139,3 +139,5 @@ Duas pastas:
 Login de teste: `carlos.dias@altave.com` / `12345678` (ou joao.pedro@ / ana.ferreira@).
 
 Detalhes de deploy no RDS e sobre o schema estão em `backend/README.md`.
+
+   Documentação da API disponível em http://localhost:3001/api-docs

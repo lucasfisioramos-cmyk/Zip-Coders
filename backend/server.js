@@ -4,10 +4,18 @@ import cors from 'cors'
 import authRoutes from './routes/auth.js'
 import ordensRoutes from './routes/ordens.js'
 import usuariosRoutes from './routes/usuarios.js'
+import swaggerUi from 'swagger-ui-express'
+import YAML from 'yamljs'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 const app = express()
 app.use(cors())
 app.use(express.json())
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'))
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 app.use('/api/auth', authRoutes)

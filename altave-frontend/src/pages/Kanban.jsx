@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../services/api.js'
 import NovaOrdemModal from '../components/NovaOrdemModal.jsx'
 import EncerrarOrdemModal from '../components/EncerrarOrdemModal.jsx'
+import EditarOrdemModal from '../components/EditarOrdemModal.jsx'
 import HistoricoOrdemModal from '../components/HistoricoOrdemModal.jsx'
 import { IconCalendar } from '../components/icons.jsx'
 
@@ -23,6 +24,7 @@ export default function Kanban({ user }) {
   const [filtroPrioridade, setFiltroPrioridade] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [encerrando, setEncerrando] = useState(null) // ordem aguardando confirmação de encerramento
+  const [editando, setEditando] = useState(null) // ordem aberta no modal de edição
   const [historicoOrdem, setHistoricoOrdem] = useState(null) // ordem com o painel de histórico aberto
   const [dragId, setDragId] = useState(null)
   const [overCol, setOverCol] = useState(null)
@@ -98,6 +100,13 @@ export default function Kanban({ user }) {
     const atualizada = await api.closeOrder(encerrando.id, solucao)
     setOrders((prev) => prev.map((o) => (o.id === atualizada.id ? atualizada : o)))
     setEncerrando(null)
+  }
+
+  // Lança o erro de volta pro modal, que mostra a mensagem sem fechar.
+  async function handleEditar(dados) {
+    const atualizada = await api.updateOrder(editando.id, dados)
+    setOrders((prev) => prev.map((o) => (o.id === atualizada.id ? atualizada : o)))
+    setEditando(null)
   }
 
   async function handleCreate(form) {
@@ -198,6 +207,11 @@ export default function Kanban({ user }) {
                     <div className="kcard-bottom">
                       {col.key !== 'Concluída' && <span className="kcard-aging">{o.agingLabel}</span>}
                       <div className="kcard-right">
+                        {o.podeEditar && (
+                          <button type="button" className="btn-editar" onClick={(e) => { e.stopPropagation(); setEditando(o) }}>
+                            Editar
+                          </button>
+                        )}
                         {o.podeEncerrar && (
                           <button type="button" className="btn-encerrar" onClick={(e) => { e.stopPropagation(); setEncerrando(o) }}>
                             Encerrar
@@ -219,6 +233,7 @@ export default function Kanban({ user }) {
 
       {showModal && <NovaOrdemModal user={user} onClose={() => setShowModal(false)} onCreate={handleCreate} />}
       {historicoOrdem && <HistoricoOrdemModal ordem={historicoOrdem} onClose={() => setHistoricoOrdem(null)} />}
+      {editando && <EditarOrdemModal ordem={editando} onClose={() => setEditando(null)} onConfirm={handleEditar} />}
       {encerrando && <EncerrarOrdemModal ordem={encerrando} user={user} onClose={() => setEncerrando(null)} onConfirm={handleEncerrar} />}
     </div>
   )
