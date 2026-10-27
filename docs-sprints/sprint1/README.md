@@ -30,7 +30,7 @@ O foco está na organização das informações de forma intuitiva e transparent
 
 | Critério | Descrição |
 |---------|----------|
-| Clareza na Descrição | A User Story descreve claramente a funcionalidade relacionada aos dados dos deputados. |
+| Clareza na Descrição | A User Story descreve claramente a funcionalidade relacionada aos dados das ordens. |
 | Critérios de Aceitação Definidos | Estão definidos critérios como exibição correta de dados, funcionamento da busca e carregamento das informações. |
 | Cenários de Teste Especificados | Existem cenários de teste para validar funcionalidades como listagem, busca e visualização de dados. |
 | Independente | A funcionalidade pode ser desenvolvida sem depender de outra da Sprint. |
