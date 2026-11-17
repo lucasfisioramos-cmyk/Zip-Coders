@@ -7,6 +7,7 @@ import Relatorios from './pages/Relatorios.jsx'
 import Manual from './pages/Manual.jsx'
 import Usuarios from './pages/Usuarios.jsx'
 import Historico from './pages/Historico.jsx'
+import Painel from './pages/Painel.jsx'
 
 export default function App() {
   const [user, setUser] = useState(() => {
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/relatorios" element={<Relatorios />} />
         <Route path="/historico/:codigo" element={<Historico />} />
         <Route path="/manual" element={<Manual />} />
+        <Route path="/painel" element={['ADMIN', 'GESTOR'].includes(user.perfil) ? <Painel /> : <Navigate to="/kanban" replace />} />
                <Route path="/usuarios" element={['ADMIN', 'GESTOR'].includes(user.perfil) ? <Usuarios /> : <Navigate to="/kanban" replace />} />
       </Route>
     </Routes>

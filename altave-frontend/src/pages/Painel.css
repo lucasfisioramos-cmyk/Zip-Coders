@@ -1,0 +1,31 @@
+.painel-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.painel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #dfe3e8;
+  border-radius: 10px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.painel-card:hover { border-color: #9aa4b2; }
+.painel-card.ativo { border-color: #1a56c4; box-shadow: 0 0 0 2px #e8f0fe; }
+.painel-card-total { cursor: default; background: #f6f7f9; }
+.painel-card-total:hover { border-color: #dfe3e8; }
+.painel-card-rotulo { font-size: 13px; color: #6b7686; }
+.painel-card-valor { font-size: 30px; font-weight: 700; }
+.painel-erro {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: #fde8e8;
+  color: #b42318;
+}
