@@ -25,6 +25,6 @@ export const api = {
   closeOrder: (id, solucao) => http.post(`/ordens/${id}/encerrar`, { solucao }).then((r) => r.data),
   listUsers: () => http.get('/usuarios').then((r) => r.data),
   createUser: (data) => http.post('/usuarios', data).then((r) => r.data),
+  getDashboardStatus: () => http.get('/dashboard/status').then((r) => r.data),
 }
 
-getDashboardStatus: () => http.get('/dashboard/status').then((r) => r.data),
