@@ -4,6 +4,7 @@ import cors from 'cors'
 import authRoutes from './routes/auth.js'
 import ordensRoutes from './routes/ordens.js'
 import usuariosRoutes from './routes/usuarios.js'
+import relatoriosRoutes from './routes/relatorios.js'
 import swaggerUi from 'swagger-ui-express'
 import YAML from 'yamljs'
 import path from 'path'
@@ -21,7 +22,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }))
 app.use('/api/auth', authRoutes)
 app.use('/api/ordens', ordensRoutes)
 app.use('/api/usuarios', usuariosRoutes)
-
+app.use('/api/relatorios', relatoriosRoutes)
 app.use((err, _req, res, _next) => {
   console.error(err)
   res.status(500).json({ erro: 'Erro interno do servidor.' })

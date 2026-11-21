@@ -25,6 +25,8 @@ tags:
     description: Abertura, Kanban, encerramento e histórico das OS
   - name: Usuários
     description: Cadastro e gerenciamento de usuários
+  - name: Relatórios
+    description: Exportação de dados
 
 paths:
   /health:
@@ -225,7 +227,55 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Erro' }
-
+  /relatorios/ordens/exportar:
+    get:
+      tags: [Relatórios]
+      summary: Exporta as OS em CSV ou Excel
+      description: >
+        Gera um arquivo com todas as ordens de serviço, com filtros opcionais.
+        Somente Gestor ou Administrador. O CSV usa ";" como separador e abre
+        corretamente no Excel em português.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: formato
+          schema: { type: string, enum: [csv, xlsx], default: csv }
+        - in: query
+          name: status
+          description: Nome do status como exibido no Kanban
+          schema: { type: string }
+          example: Em andamento
+        - in: query
+          name: prioridade
+          schema: { type: string }
+          example: Alta
+        - in: query
+          name: de
+          description: Data inicial de criação (AAAA-MM-DD)
+          schema: { type: string, format: date }
+        - in: query
+          name: ate
+          description: Data final de criação (AAAA-MM-DD)
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Arquivo gerado
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+        '400':
+          description: Formato, status, prioridade ou data inválidos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '401': { $ref: '#/components/responses/NaoAutenticado' }
+        '403':
+          description: Sem permissão para exportar relatórios
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
   /usuarios:
     get:
       tags: [Usuários]
