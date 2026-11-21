@@ -1,11 +1,34 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../services/api.js'
+import './Relatorios.css'
 
-// A API devolve datas como "dd/mm/aaaa"; converte para Date para filtrar por período
 function parseData(br) {
   if (!br) return null
   const [d, m, a] = br.split('/')
   return new Date(Number(a), Number(m) - 1, Number(d))
+}
+
+// Entrega o arquivo ao navegador como download
+function baixarArquivo(blob, nome) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nome
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+// Com responseType 'blob', a mensagem de erro da API também vem como Blob
+async function mensagemDeErro(e) {
+  try {
+    if (e.response?.data instanceof Blob) {
+      const json = JSON.parse(await e.response.data.text())
+      if (json.erro) return json.erro
+    }
+  } catch { /* cai na mensagem padrão */ }
+  return 'Não foi possível exportar o arquivo.'
 }
 
 export default function Relatorios() {
@@ -16,6 +39,10 @@ export default function Relatorios() {
   const [status, setStatus] = useState('todos')
   const [responsavel, setResponsavel] = useState('todos')
   const [periodo, setPeriodo] = useState('todos')
+
+  const [menuAberto, setMenuAberto] = useState(false)
+  const [exportando, setExportando] = useState(false)
+  const [erroExport, setErroExport] = useState('')
 
   useEffect(() => {
     api.listOrders()
@@ -43,6 +70,26 @@ export default function Relatorios() {
     })
   }, [ordens, status, responsavel, periodo])
 
+  async function exportar(formato) {
+    setMenuAberto(false)
+    setErroExport('')
+    setExportando(true)
+    try {
+      // Envia só os filtros que estão ativos, mais o formato
+      const params = { formato }
+      if (status !== 'todos') params.status = status
+      if (responsavel !== 'todos') params.responsavel = responsavel
+      if (periodo !== 'todos') params.periodo = periodo
+
+      const blob = await api.exportOrdersCsv(params)
+      baixarArquivo(blob, `ordens-${new Date().toLocaleDateString('sv-SE')}.${formato}`)
+    } catch (e) {
+      setErroExport(await mensagemDeErro(e))
+    } finally {
+      setExportando(false)
+    }
+  }
+
   return (
     <div className="page">
       <h1>Relatórios</h1>
@@ -65,6 +112,8 @@ export default function Relatorios() {
           <option value="30">Últimos 30 dias</option>
         </select>
       </div>
+
+      {erroExport && <p className="rel-erro">{erroExport}</p>}
 
       <div className="table-card">
         <table>
@@ -99,9 +148,22 @@ export default function Relatorios() {
         </table>
         <div className="table-foot">
           <span>{rows.length} de {ordens.length} ordens</span>
-          <div>
-            <button className="btn-outline">Exportar PDF</button>
-            <button className="btn-outline">Exportar Excel</button>
+
+          <div className="rel-export">
+            <button
+              className="btn-outline"
+              disabled={carregando || exportando}
+              onClick={() => setMenuAberto((v) => !v)}
+            >
+              {exportando ? 'Exportando…' : 'Exportar ▾'}
+            </button>
+            {menuAberto && (
+              <div className="rel-export-menu">
+                <button onClick={() => exportar('csv')}>CSV</button>
+                <button onClick={() => exportar('xlsx')}>Excel (.xlsx)</button>
+                <button disabled title="Em breve">PDF (em breve)</button>
+              </div>
+            )}
           </div>
         </div>
       </div>

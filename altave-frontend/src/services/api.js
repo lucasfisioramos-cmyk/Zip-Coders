@@ -26,5 +26,7 @@ export const api = {
   listUsers: () => http.get('/usuarios').then((r) => r.data),
   createUser: (data) => http.post('/usuarios', data).then((r) => r.data),
   getDashboardStatus: () => http.get('/dashboard/status').then((r) => r.data),
+  exportOrdersCsv: (params) =>
+  http.get('/relatorios/ordens/exportar', { params, responseType: 'blob' }).then((r) => r.data),
 }
 
