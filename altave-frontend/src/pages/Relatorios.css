@@ -1,0 +1,32 @@
+.rel-export { position: relative; display: inline-block; }
+.rel-export-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #dfe3e8;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  z-index: 10;
+}
+.rel-export-menu button {
+  padding: 10px 14px;
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.rel-export-menu button:hover:not(:disabled) { background: #f0f2f5; }
+.rel-export-menu button:disabled { color: #9aa4b2; cursor: not-allowed; }
+.rel-erro {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: #fde8e8;
+  color: #b42318;
+}
