@@ -26,6 +26,8 @@ export default function Kanban({ user }) {
   const [encerrando, setEncerrando] = useState(null) // ordem aguardando confirmação de encerramento
   const [editando, setEditando] = useState(null) // ordem aberta no modal de edição
   const [historicoOrdem, setHistoricoOrdem] = useState(null) // ordem com o painel de histórico aberto
+  const [responsaveis, setResponsaveis] = useState({ usuarios: [], carregando: true, erro: '' })
+  const modalComResponsavel = showModal || Boolean(editando)
   const [dragId, setDragId] = useState(null)
   const [overCol, setOverCol] = useState(null)
 
@@ -43,6 +45,20 @@ export default function Kanban({ user }) {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!modalComResponsavel) return
+    let ativo = true
+    setResponsaveis({ usuarios: [], carregando: true, erro: '' })
+    api.listUsers()
+      .then((usuarios) => {
+        if (ativo) setResponsaveis({ usuarios: usuarios.filter((u) => u.ativo), carregando: false, erro: '' })
+      })
+      .catch(() => {
+        if (ativo) setResponsaveis({ usuarios: [], carregando: false, erro: 'Não foi possível carregar responsáveis.' })
+      })
+    return () => { ativo = false }
+  }, [modalComResponsavel])
 
   const filtered = orders.filter((o) =>
     (o.title.toLowerCase().includes(busca.toLowerCase()) || o.id.toLowerCase().includes(busca.toLowerCase())) &&
@@ -231,9 +247,9 @@ export default function Kanban({ user }) {
         </div>
       )}
 
-      {showModal && <NovaOrdemModal user={user} onClose={() => setShowModal(false)} onCreate={handleCreate} />}
+      {showModal && <NovaOrdemModal responsaveis={responsaveis} user={user} onClose={() => setShowModal(false)} onCreate={handleCreate} />}
       {historicoOrdem && <HistoricoOrdemModal ordem={historicoOrdem} onClose={() => setHistoricoOrdem(null)} />}
-      {editando && <EditarOrdemModal ordem={editando} onClose={() => setEditando(null)} onConfirm={handleEditar} />}
+      {editando && <EditarOrdemModal responsaveis={responsaveis} ordem={editando} onClose={() => setEditando(null)} onConfirm={handleEditar} />}
       {encerrando && <EncerrarOrdemModal ordem={encerrando} user={user} onClose={() => setEncerrando(null)} onConfirm={handleEncerrar} />}
     </div>
   )

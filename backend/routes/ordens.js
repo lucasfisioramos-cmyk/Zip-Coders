@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import { FiltroInvalidoError, FUSO_ORDENS, lerFiltros, montarWhere } from '../lib/filtros-ordens.js'
 import { enviarEmail } from '../lib/email.js'
+import { notificarAtribuicao, notificarMudancaStatus } from '../lib/notificacoes-os.js'
 import {
   STATUS_DB_TO_API, STATUS_API_TO_DB, STATUS_KANBAN_DB,
   PRIORIDADE_DB_TO_API, PRIORIDADE_API_TO_DB,
@@ -52,6 +53,29 @@ function podeAlterarPrioridade(user, o) {
   return o.status !== 'CONCLUIDA' && isGestor(user)
 }
 
+// Restaura a regra da edição: gestão, responsável ou solicitante de uma OS aberta.
+function podeEditar(user, o) {
+  return EM_ABERTO.includes(o.status) &&
+    (isGestor(user) || o.responsavelId === user.id || o.solicitanteId === user.id)
+}
+
+class ResponsavelInvalido extends Error {}
+
+async function resolverResponsavel(responsavelId, nome) {
+  if (responsavelId === null || (responsavelId === undefined && (!nome || nome === 'Não atribuído'))) return null
+  const porId = responsavelId !== undefined
+  const valor = porId ? responsavelId : nome
+  if (typeof valor !== 'string' || !valor.trim()) throw new ResponsavelInvalido('Responsável inválido.')
+  const usuarios = await prisma.usuario.findMany({
+    where: { ativo: true, ...(porId ? { id: valor } : { nome: valor }) },
+    select: { id: true, nome: true },
+    take: 2,
+  })
+  if (!usuarios.length) throw new ResponsavelInvalido('Responsável não encontrado.')
+  if (usuarios.length > 1) throw new ResponsavelInvalido('Há mais de um usuário com esse nome. Selecione o responsável pela interface.')
+  return usuarios[0]
+}
+
 function toApi(o, user) {
   return {
     id: o.codigo,
@@ -59,6 +83,7 @@ function toApi(o, user) {
     descricao: o.descricao,
     priority: PRIORIDADE_DB_TO_API[o.prioridade] || 'Média',
     status: STATUS_DB_TO_API[o.status] || o.status,
+    responsavelId: o.responsavelId,
     responsavel: o.responsavel ? o.responsavel.nome : 'Não atribuído',
     avatar: o.responsavel ? initials(o.responsavel.nome) : '?',
     avatarColor: o.responsavel ? colorFor(o.responsavel.email) : '#9aa4b2',
@@ -68,6 +93,7 @@ function toApi(o, user) {
     solicitante: o.solicitante ? o.solicitante.nome : null,
     agingLabel: agingLabel(o),
     solucao: o.solucao,
+    podeEditar: podeEditar(user, o),
     podeEncerrar: podeEncerrar(user, o),
     podeReabrir: podeReabrir(user, o),
     podeAlterarPrioridade: podeAlterarPrioridade(user, o),
@@ -101,17 +127,19 @@ async function nextCodigo() {
 }
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { titulo, descricao, prioridade, responsavel } = req.body || {}
+  const { titulo, descricao, prioridade, responsavel, responsavelId } = req.body || {}
   if (!titulo) return res.status(400).json({ erro: 'Título é obrigatório.' })
   const prioridadeDb = PRIORIDADE_API_TO_DB[prioridade]
   if (!prioridadeDb) {
     return res.status(400).json({ erro: 'Prioridade é obrigatória (Baixa, Média, Alta ou Urgente).' })
   }
 
-  let responsavelId = null
-  if (responsavel && responsavel !== 'Não atribuído') {
-    const resp = await prisma.usuario.findFirst({ where: { nome: responsavel } })
-    responsavelId = resp ? resp.id : null
+  let pessoa
+  try {
+    pessoa = await resolverResponsavel(responsavelId, responsavel)
+  } catch (err) {
+    if (err instanceof ResponsavelInvalido) return res.status(400).json({ erro: err.message })
+    throw err
   }
 
   const codigo = await nextCodigo()
@@ -124,7 +152,7 @@ router.post('/', asyncHandler(async (req, res) => {
       status: 'ABERTA',
       dataAbertura: new Date(),
       solicitanteId: req.user.id,
-      responsavelId,
+      responsavelId: pessoa?.id ?? null,
       historicos: { create: { usuarioId: req.user.id, statusAnterior: null, statusNovo: 'ABERTA' } },
     },
     include: INCLUDE_OS,
@@ -134,6 +162,7 @@ router.post('/', asyncHandler(async (req, res) => {
     data: { usuarioId: req.user.id, acao: 'criar_os', detalhes: { codigo }, ipOrigem: req.ip },
   })
 
+  notificarAtribuicao(ordem)
   res.status(201).json(toApi(ordem, req.user))
 }))
 
@@ -175,7 +204,7 @@ router.get('/:codigo/historico', asyncHandler(async (req, res) => {
 // PATCH /api/ordens/:codigo  { titulo?, descricao?, prioridade?, responsavel?, motivo }
 // Edita campos da OS. `motivo` é obrigatório: vai para o histórico e para o e-mail dos envolvidos.
 router.patch('/:codigo', asyncHandler(async (req, res) => {
-  const { titulo, descricao, prioridade, responsavel } = req.body || {}
+  const { titulo, descricao, prioridade, responsavel, responsavelId } = req.body || {}
   const motivo = typeof req.body?.motivo === 'string' ? req.body.motivo.trim() : ''
   if (motivo.length < 5) return res.status(400).json({ erro: 'Informe a breve descrição da alteração (mínimo de 5 caracteres).' })
   if (motivo.length > 1000) return res.status(400).json({ erro: 'A descrição da alteração é longa demais (máximo de 1000 caracteres).' })
@@ -193,11 +222,15 @@ router.patch('/:codigo', asyncHandler(async (req, res) => {
     return res.status(403).json({ erro: 'Você não pode editar esta ordem (ou ela já foi concluída).' })
   }
 
-  // novoResp: undefined = não mexe; null = sem responsável; objeto = novo responsável
+  // undefined mantém o responsável atual, null remove a atribuição.
   let novoResp
-  if (responsavel !== undefined) {
-    novoResp = responsavel === 'Não atribuído' ? null : await prisma.usuario.findFirst({ where: { nome: responsavel, ativo: true } })
-    if (novoResp === null && responsavel !== 'Não atribuído') return res.status(400).json({ erro: 'Responsável não encontrado.' })
+  if (responsavelId !== undefined || responsavel !== undefined) {
+    try {
+      novoResp = await resolverResponsavel(responsavelId, responsavel)
+    } catch (err) {
+      if (err instanceof ResponsavelInvalido) return res.status(400).json({ erro: err.message })
+      throw err
+    }
   }
 
   // Diff: só entra o que de fato mudou. Prioridade compara pelo rótulo da API (URGENTE aparece como "Alta").
@@ -215,25 +248,40 @@ router.patch('/:codigo', asyncHandler(async (req, res) => {
   if (!mudancas.length) return res.status(400).json({ erro: 'Nenhuma alteração para salvar.' })
 
   const resumo = mudancas.join('\n')
-  const [ordem] = await prisma.$transaction([
-    prisma.ordemServico.update({
-      where: { codigo: atual.codigo },
-      data: {
-        ...data,
-        // status igual nos dois lados = evento de edição na linha do tempo
-        historicos: { create: { usuarioId: req.user.id, statusAnterior: atual.status, statusNovo: atual.status, observacao: `${resumo}\nMotivo: ${motivo}` } },
-      },
-      include: INCLUDE_OS,
-    }),
-    prisma.logAuditoria.create({
-      data: { usuarioId: req.user.id, acao: 'editar_os', detalhes: { codigo: atual.codigo, mudancas, motivo }, ipOrigem: req.ip },
-    }),
-  ])
+  let ordem
+  try {
+    const resultado = await prisma.$transaction([
+      prisma.ordemServico.update({
+        where: {
+          codigo: atual.codigo,
+          status: atual.status,
+          ...(data.responsavelId !== undefined && { responsavelId: atual.responsavelId }),
+        },
+        data: {
+          ...data,
+          // status igual nos dois lados = evento de edição na linha do tempo
+          historicos: { create: { usuarioId: req.user.id, statusAnterior: atual.status, statusNovo: atual.status, observacao: `${resumo}\nMotivo: ${motivo}` } },
+        },
+        include: INCLUDE_OS,
+      }),
+      prisma.logAuditoria.create({
+        data: { usuarioId: req.user.id, acao: 'editar_os', detalhes: { codigo: atual.codigo, mudancas, motivo }, ipOrigem: req.ip },
+      }),
+    ])
+    ordem = resultado[0]
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(409).json({ erro: 'A ordem mudou. Recarregue antes de editar.' })
+    throw err
+  }
+
+  const novaAtribuicao = data.responsavelId != null
+  if (novaAtribuicao) notificarAtribuicao(ordem)
 
   // Envolvidos: solicitante, responsável (antigo e novo) e quem já aparece no histórico. O autor não recebe.
   const ids = new Set([atual.solicitanteId, atual.responsavelId, ordem.responsavelId, ...atual.historicos.map((h) => h.usuarioId)])
   ids.delete(null)
   ids.delete(req.user.id)
+  if (novaAtribuicao) ids.delete(ordem.responsavelId)
   // E-mail depois do commit e sem await da resposta: falha de SMTP não desfaz a edição.
   prisma.usuario.findMany({ where: { id: { in: [...ids] }, ativo: true }, select: { email: true } })
     .then((us) => enviarEmail({
@@ -291,6 +339,7 @@ router.patch('/:codigo/status', asyncHandler(async (req, res) => {
     }),
   ])
 
+  notificarMudancaStatus(ordem, atual.status)
   res.json(toApi(ordem, req.user))
 }))
 
@@ -392,6 +441,7 @@ router.post('/:codigo/encerrar', asyncHandler(async (req, res) => {
     }),
   ])
 
+  notificarMudancaStatus(ordem, atual.status)
   res.json(toApi(ordem, req.user))
 }))
 

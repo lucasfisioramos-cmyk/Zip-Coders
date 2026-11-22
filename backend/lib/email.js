@@ -9,8 +9,8 @@ const transporter = process.env.SMTP_HOST
     })
   : null
 
-export async function enviarEmail({ to, subject, text }) {
+export async function enviarEmail({ to, subject, text, html }) {
   if (!to.length) return
   if (!transporter) return console.log(`[email simulado] para: ${to.join(', ')}\n${subject}\n${text}`)
-  await transporter.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER, bcc: to, subject, text })
+  await transporter.sendMail({ from: process.env.MAIL_FROM || process.env.SMTP_USER, bcc: to, subject, text, html })
 }
