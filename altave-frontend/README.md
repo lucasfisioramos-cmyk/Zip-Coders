@@ -1,25 +1,5 @@
-# Altave — Central de Ordens de Serviço (front)
+# Altave — Central de Ordens de Serviço (frontend)
 
-## Rodar
-npm install
-npm run dev
+A interface React usa o Vite e consome a API Express. O [manual de instalação e implantação](../docs/instalacao.md) explica como configurar a API, rodar a aplicação localmente e publicar o build em homologação.
 
-## Backend / RDS
-Front NÃO conversa direto com RDS. Precisa de uma API (Node/Express, Lambda+API Gateway etc)
-na frente do Postgres/MySQL do RDS, expondo:
-  POST /auth/login
-  GET  /ordens
-  POST /ordens
-  PATCH /ordens/:id/status
-
-Aponte o front pra ela via env var VITE_API_URL (arquivo .env):
-  VITE_API_URL=https://sua-api.com/api
-
-Toda a integração fica isolada em src/services/api.js — troque os mocks
-(src/data/mockData.js) pelas chamadas do api.js quando o backend estiver pronto.
-
-## Estrutura
-src/pages     -> Login, Kanban, Relatorios, Manual
-src/components -> Layout (sidebar+topbar), NovaOrdemModal
-src/data      -> mocks
-src/services  -> api.js (unico ponto de rede)
+A variável `VITE_API_URL`, exemplificada em `.env.example`, define a URL da API usada por `src/services/api.js`. O Vite incorpora esse valor durante o build.

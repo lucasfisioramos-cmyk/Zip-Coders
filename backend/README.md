@@ -26,23 +26,9 @@ Criar OS grava `criar_os`.
 > `20261008223000_encerrado_por` (coluna `ordens_servico.encerrado_por_id`, com preenchimento das OS já concluídas).
 > Rode `npx prisma migrate deploy` (ou `migrate dev`) antes de subir esta versão.
 
-## Subir com o RDS da AWS
+## Instalação e configuração
 
-1. Crie o banco Postgres no RDS e libere o Security Group pra sua máquina/servidor (porta 5432).
-2. cp .env.example .env — preencha DATABASE_URL com o endpoint do RDS
-   (adicione `?sslmode=require` no final se o RDS exigir SSL).
-3. npm install                → instala tudo, incluindo o Prisma Client (postinstall roda `prisma generate`)
-4. npx prisma migrate deploy  → cria as tabelas no RDS a partir do schema.prisma
-   (se preferir gerar a migration antes, localmente: `npx prisma migrate dev --name init`)
-5. npm run seed               → cria usuários de teste (senha "12345678" pra todos):
-   carlos.dias@altave.com, joao.pedro@altave.com, ana.ferreira@altave.com
-6. npm run dev  (ou npm start)
-
-A API sobe em http://localhost:3001. No front, aponte VITE_API_URL=http://localhost:3001/api.
-
-## Local sem RDS (testar rápido)
-docker run -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=altave postgres
-Deixe o DATABASE_URL do .env.example como está (aponta pro localhost) e siga os passos 3-6.
+O [manual de instalação e implantação](../docs/instalacao.md) contém o setup do banco, as variáveis de ambiente, as migrations e a configuração de homologação.
 
 ## Observação sobre o schema
 O `schema.prisma` não tem um campo de "prazo previsto" pra OS (só `dataAbertura`/`dataConclusao`).

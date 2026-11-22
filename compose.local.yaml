@@ -1,0 +1,21 @@
+name: zip-coders-local
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: zip_coders_local
+      POSTGRES_USER: zip_local
+      POSTGRES_PASSWORD: zip_local
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres-local:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U zip_local -d zip_coders_local"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-local:
