@@ -81,9 +81,25 @@ paths:
   /ordens:
     get:
       tags: [Ordens de Serviço]
-      summary: Lista as OS do quadro Kanban
-      description: Retorna as ordens exibidas no Kanban, da mais recente para a mais antiga.
+      summary: Lista as ordens de serviço
+      description: Retorna as ordens exibidas no Kanban, da mais recente para a mais antiga. Os filtros são opcionais e cumulativos.
       security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [Aberta, 'Em andamento', Concluída] }
+        - in: query
+          name: responsavel
+          description: Nome do responsável. Use "Não atribuído" para ordens sem responsável.
+          schema: { type: string, example: Ana Souza }
+        - in: query
+          name: dataInicio
+          description: Primeiro dia de abertura incluído, no fuso America/Sao_Paulo.
+          schema: { type: string, format: date }
+        - in: query
+          name: dataFim
+          description: Último dia de abertura incluído, no fuso America/Sao_Paulo.
+          schema: { type: string, format: date }
       responses:
         '200':
           description: Lista de ordens
@@ -92,6 +108,11 @@ paths:
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Ordem' }
+        '400':
+          description: Filtro inválido
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
         '401': { $ref: '#/components/responses/NaoAutenticado' }
     post:
       tags: [Ordens de Serviço]

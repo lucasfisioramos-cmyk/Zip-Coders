@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
+import { FiltroInvalidoError, FUSO_ORDENS, lerFiltros, montarWhere } from '../lib/filtros-ordens.js'
 import { enviarEmail } from '../lib/email.js'
 import {
   STATUS_DB_TO_API, STATUS_API_TO_DB, STATUS_KANBAN_DB,
@@ -16,7 +17,7 @@ const INCLUDE_OS = { responsavel: true, solicitante: true, encerradoPor: true }
 
 function fmtDate(d) {
   if (!d) return null
-  return new Date(d).toLocaleDateString('pt-BR')
+  return new Date(d).toLocaleDateString('pt-BR', { timeZone: FUSO_ORDENS })
 }
 
 function agingLabel(o) {
@@ -74,8 +75,15 @@ function toApi(o, user) {
 }
 
 router.get('/', asyncHandler(async (req, res) => {
+  let filtros
+  try {
+    filtros = montarWhere(lerFiltros(req.query))
+  } catch (err) {
+    if (err instanceof FiltroInvalidoError) return res.status(400).json({ erro: err.message })
+    throw err
+  }
   const ordens = await prisma.ordemServico.findMany({
-    where: { status: { in: STATUS_KANBAN_DB } },
+    where: { status: { in: STATUS_KANBAN_DB }, ...filtros },
     include: INCLUDE_OS,
     orderBy: { createdAt: 'desc' },
   })

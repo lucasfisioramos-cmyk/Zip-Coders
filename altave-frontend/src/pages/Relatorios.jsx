@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../services/api.js'
 import './Relatorios.css'
 
-function parseData(br) {
-  if (!br) return null
-  const [d, m, a] = br.split('/')
-  return new Date(Number(a), Number(m) - 1, Number(d))
+const FILTROS_PADRAO = { status: '', responsavel: '', dataInicio: '', dataFim: '' }
+const STATUS = ['Aberta', 'Em andamento', 'Concluída']
+
+function parametros(filtros) {
+  return Object.fromEntries(Object.entries(filtros).filter(([, valor]) => valor))
 }
 
 // Entrega o arquivo ao navegador como download
@@ -36,52 +37,65 @@ export default function Relatorios() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
 
-  const [status, setStatus] = useState('todos')
-  const [responsavel, setResponsavel] = useState('todos')
-  const [periodo, setPeriodo] = useState('todos')
+  const [filtros, setFiltros] = useState({ ...FILTROS_PADRAO })
+  const [responsaveis, setResponsaveis] = useState([])
+  const [totalOrdens, setTotalOrdens] = useState(null)
 
   const [menuAberto, setMenuAberto] = useState(false)
   const [exportando, setExportando] = useState(false)
   const [erroExport, setErroExport] = useState('')
+  const carregamentoInicial = carregando && totalOrdens === null
+  const intervaloInvalido = Boolean(filtros.dataInicio && filtros.dataFim && filtros.dataInicio > filtros.dataFim)
 
   useEffect(() => {
-    api.listOrders()
-      .then(setOrdens)
-      .catch(() => setErro('Não foi possível carregar as ordens.'))
-      .finally(() => setCarregando(false))
-  }, [])
+    if (intervaloInvalido) {
+      setCarregando(false)
+      setOrdens([])
+      setErro('A data inicial deve ser anterior ou igual à data final.')
+      return
+    }
 
-  const statusDisponiveis = useMemo(() => [...new Set(ordens.map((o) => o.status))], [ordens])
-  const responsaveis = useMemo(() => [...new Set(ordens.map((o) => o.responsavel))], [ordens])
+    let ativa = true
+    const params = parametros(filtros)
+    setCarregando(true)
+    setErro('')
+    api.listOrders(params)
+      .then((dados) => {
+        if (!ativa) return
+        setOrdens(dados)
+        if (Object.keys(params).length === 0) {
+          setResponsaveis([...new Set(dados.map((ordem) => ordem.responsavel))].sort((a, b) => a.localeCompare(b, 'pt-BR')))
+          setTotalOrdens(dados.length)
+        }
+      })
+      .catch((falha) => {
+        if (!ativa) return
+        setOrdens([])
+        setErro(falha.response?.data?.erro || 'Não foi possível carregar as ordens.')
+      })
+      .finally(() => { if (ativa) setCarregando(false) })
+    return () => { ativa = false }
+  }, [filtros, intervaloInvalido])
 
-  const rows = useMemo(() => {
-    const limite = periodo === 'todos'
-      ? null
-      : Date.now() - Number(periodo) * 24 * 60 * 60 * 1000
+  function alterarFiltro(evento) {
+    const { name, value } = evento.target
+    setFiltros((anterior) => ({ ...anterior, [name]: value }))
+    setMenuAberto(false)
+    setErroExport('')
+  }
 
-    return ordens.filter((o) => {
-      if (status !== 'todos' && o.status !== status) return false
-      if (responsavel !== 'todos' && o.responsavel !== responsavel) return false
-      if (limite) {
-        const aberta = parseData(o.abertaEm)
-        if (!aberta || aberta.getTime() < limite) return false
-      }
-      return true
-    })
-  }, [ordens, status, responsavel, periodo])
+  function limparFiltros() {
+    setFiltros({ ...FILTROS_PADRAO })
+    setMenuAberto(false)
+    setErroExport('')
+  }
 
   async function exportar(formato) {
     setMenuAberto(false)
     setErroExport('')
     setExportando(true)
     try {
-      // Envia só os filtros que estão ativos, mais o formato
-      const params = { formato }
-      if (status !== 'todos') params.status = status
-      if (responsavel !== 'todos') params.responsavel = responsavel
-      if (periodo !== 'todos') params.periodo = periodo
-
-      const blob = await api.exportOrdersCsv(params)
+      const blob = await api.exportOrdersCsv({ formato, ...parametros(filtros) })
       baixarArquivo(blob, `ordens-${new Date().toLocaleDateString('sv-SE')}.${formato}`)
     } catch (e) {
       setErroExport(await mensagemDeErro(e))
@@ -95,23 +109,35 @@ export default function Relatorios() {
       <h1>Relatórios</h1>
       <p className="page-sub">Consulte e exporte o histórico de ordens de serviço.</p>
 
-      <div className="filters">
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="todos">Status: todos</option>
-          {statusDisponiveis.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
+      <form className="filters rel-filtros" onSubmit={(evento) => evento.preventDefault()}>
+        <div className="rel-filtro">
+          <label htmlFor="filtro-status">Status</label>
+          <select id="filtro-status" name="status" disabled={carregamentoInicial} value={filtros.status} onChange={alterarFiltro}>
+            <option value="">Todos</option>
+            {STATUS.map((status) => <option key={status}>{status}</option>)}
+          </select>
+        </div>
 
-        <select value={responsavel} onChange={(e) => setResponsavel(e.target.value)}>
-          <option value="todos">Responsável: todos</option>
-          {responsaveis.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <div className="rel-filtro">
+          <label htmlFor="filtro-responsavel">Responsável</label>
+          <select id="filtro-responsavel" name="responsavel" disabled={carregamentoInicial} value={filtros.responsavel} onChange={alterarFiltro}>
+            <option value="">Todos</option>
+            {responsaveis.map((nome) => <option key={nome}>{nome}</option>)}
+          </select>
+        </div>
 
-        <select value={periodo} onChange={(e) => setPeriodo(e.target.value)}>
-          <option value="todos">Período: todos</option>
-          <option value="7">Últimos 7 dias</option>
-          <option value="30">Últimos 30 dias</option>
-        </select>
-      </div>
+        <div className="rel-filtro">
+          <label htmlFor="filtro-dataInicio">Aberta a partir de</label>
+          <input id="filtro-dataInicio" type="date" name="dataInicio" disabled={carregamentoInicial} value={filtros.dataInicio} onChange={alterarFiltro} />
+        </div>
+
+        <div className="rel-filtro">
+          <label htmlFor="filtro-dataFim">Aberta até</label>
+          <input id="filtro-dataFim" type="date" name="dataFim" disabled={carregamentoInicial} value={filtros.dataFim} onChange={alterarFiltro} />
+        </div>
+
+        <button type="button" className="btn-outline" onClick={limparFiltros}>Limpar Filtros</button>
+      </form>
 
       {erroExport && <p className="rel-erro">{erroExport}</p>}
 
@@ -124,11 +150,11 @@ export default function Relatorios() {
           </thead>
           <tbody>
             {carregando && <tr><td colSpan={7}>Carregando…</td></tr>}
-            {!carregando && erro && <tr><td colSpan={7}>{erro}</td></tr>}
-            {!carregando && !erro && rows.length === 0 && (
+            {!carregando && erro && <tr><td colSpan={7}><span role="alert">{erro}</span></td></tr>}
+            {!carregando && !erro && ordens.length === 0 && (
               <tr><td colSpan={7}>Nenhuma ordem encontrada.</td></tr>
             )}
-            {rows.map((o) => (
+            {!carregando && !erro && ordens.map((o) => (
               <tr key={o.id}>
                 <td>{o.id}</td>
                 <td>{o.title}</td>
@@ -147,12 +173,12 @@ export default function Relatorios() {
           </tbody>
         </table>
         <div className="table-foot">
-          <span>{rows.length} de {ordens.length} ordens</span>
+          <span>{ordens.length} de {totalOrdens ?? 0} ordens</span>
 
           <div className="rel-export">
             <button
               className="btn-outline"
-              disabled={carregando || exportando}
+              disabled={carregando || exportando || Boolean(erro) || intervaloInvalido}
               onClick={() => setMenuAberto((v) => !v)}
             >
               {exportando ? 'Exportando…' : 'Exportar ▾'}

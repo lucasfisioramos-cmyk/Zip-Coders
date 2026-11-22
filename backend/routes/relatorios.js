@@ -4,25 +4,19 @@ import { asyncHandler } from '../lib/asyncHandler.js'
 import {
   gerarCsvOrdens,
   gerarXlsxOrdens,
-  FiltroInvalidoError,
 } from '../services/relatorios.service.js'
+import { FiltroInvalidoError, lerFiltros } from '../lib/filtros-ordens.js'
 
 const router = Router()
 router.use(requireAuth, requireRoles('ADMIN', 'GESTOR'))
 
-const texto = (v) => (typeof v === 'string' ? v : undefined)
-
-// GET /api/relatorios/ordens/exportar?formato=csv|xlsx&status=&responsavel=&periodo=
+// GET /api/relatorios/ordens/exportar
 router.get('/ordens/exportar', asyncHandler(async (req, res) => {
-  const filtros = {
-    status: texto(req.query.status),
-    responsavel: texto(req.query.responsavel),
-    periodo: texto(req.query.periodo),
-  }
   const formato = req.query.formato === 'xlsx' ? 'xlsx' : 'csv'
   const dia = new Date().toLocaleDateString('sv-SE') // aaaa-mm-dd
 
   try {
+    const filtros = lerFiltros(req.query)
     if (formato === 'xlsx') {
       const buffer = await gerarXlsxOrdens(filtros)
       res.setHeader(

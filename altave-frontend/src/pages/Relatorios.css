@@ -30,3 +30,8 @@
   background: #fde8e8;
   color: #b42318;
 }
+
+.rel-filtros { align-items: flex-end; }
+.rel-filtro { display: grid; gap: 6px; font-size: 14px; }
+.rel-filtros input { min-width: 0; }
+.rel-filtros .btn-outline { margin-left: 0; }

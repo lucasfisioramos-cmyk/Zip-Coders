@@ -1,45 +1,16 @@
 import ExcelJS from 'exceljs'
 import { prisma } from '../lib/prisma.js'
-import { STATUS_API_TO_DB } from '../lib/mapping.js'
+import { FUSO_ORDENS, montarWhere } from '../lib/filtros-ordens.js'
 
 const COLUNAS = ['ID', 'Título', 'Responsável', 'Data de Abertura', 'Data de Conclusão']
 const SEPARADOR = ';' // use ',' se o destino esperar CSV "americano"
-const FUSO = 'America/Sao_Paulo'
-
-export class FiltroInvalidoError extends Error {}
-
-const fmtData = (d) => (d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: FUSO }) : '')
+const fmtData = (d) => (d ? new Date(d).toLocaleDateString('pt-BR', { timeZone: FUSO_ORDENS }) : '')
 
 // Data "pura" (sem hora) no fuso de São Paulo, para o Excel não deslocar o dia
 function dataParaExcel(d) {
   if (!d) return null
   const [dia, mes, ano] = fmtData(d).split('/').map(Number)
   return new Date(Date.UTC(ano, mes - 1, dia))
-}
-
-function montarWhere({ status, responsavel, periodo }) {
-  const where = {}
-
-  if (status && status !== 'todos') {
-    const statusDb = STATUS_API_TO_DB[status]
-    if (!statusDb) throw new FiltroInvalidoError('Status inválido.')
-    where.status = statusDb
-  }
-
-  if (responsavel && responsavel !== 'todos') {
-    if (responsavel === 'Não atribuído') where.responsavelId = null
-    else where.responsavel = { is: { nome: responsavel } }
-  }
-
-  if (periodo && periodo !== 'todos') {
-    const dias = Number(periodo)
-    if (!Number.isInteger(dias) || dias < 1 || dias > 3650) {
-      throw new FiltroInvalidoError('Período inválido.')
-    }
-    where.dataAbertura = { gte: new Date(Date.now() - dias * 24 * 60 * 60 * 1000) }
-  }
-
-  return where
 }
 
 async function buscarOrdens(filtros) {
