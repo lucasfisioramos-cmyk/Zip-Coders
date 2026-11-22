@@ -1,0 +1,54 @@
+name: zip-coders-staging
+
+services:
+  staging-db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: zip_coders_staging
+      POSTGRES_USER: zip_staging
+      POSTGRES_PASSWORD: ${STAGING_DB_PASSWORD:?Defina STAGING_DB_PASSWORD}
+    volumes:
+      - staging-data:/var/lib/postgresql/data
+      - ./deploy/staging/init.sql:/docker-entrypoint-initdb.d/10-staging.sql:ro
+    networks: [staging-data]
+    healthcheck:
+      test: [CMD-SHELL, 'PGPASSWORD="$$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -Atqc "SELECT ambiente FROM homologacao_guard.identidade WHERE ambiente = ''zip-coders-staging-v1''" | grep -qx zip-coders-staging-v1']
+      interval: 5s
+      timeout: 4s
+      retries: 12
+    restart: unless-stopped
+
+  staging-app:
+    build:
+      context: .
+      dockerfile: deploy/staging/Dockerfile
+    environment:
+      APP_ENV: staging
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: postgresql://zip_staging:${STAGING_DB_PASSWORD:?Defina STAGING_DB_PASSWORD}@staging-db:5432/zip_coders_staging?schema=public
+      JWT_SECRET: ${STAGING_JWT_SECRET:?Defina STAGING_JWT_SECRET}
+      STAGING_TEST_PASSWORD: ${STAGING_TEST_PASSWORD:?Defina STAGING_TEST_PASSWORD}
+      SMTP_HOST: ""
+    ports:
+      - "127.0.0.1:${STAGING_PORT:-18080}:3001"
+    networks: [staging-web, staging-data]
+    depends_on:
+      staging-db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3001/api/ready', {signal: AbortSignal.timeout(3000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+      start_period: 15s
+    init: true
+    restart: unless-stopped
+
+networks:
+  staging-web:
+  staging-data:
+    internal: true
+
+volumes:
+  staging-data:
