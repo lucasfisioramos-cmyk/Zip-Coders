@@ -1,5 +1,6 @@
 // Popula o banco com usuários de teste e algumas ordens de serviço.
 // Rode depois do prisma migrate/db push: npm run seed
+import 'dotenv/config'
 import bcrypt from 'bcryptjs'
 import { prisma } from './lib/prisma.js'
 
