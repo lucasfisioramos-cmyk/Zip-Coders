@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react'
 import { api } from '../services/api.js'
 import NovoUsuarioModal from '../components/NovoUsuarioModal.jsx'
 
-export default function Usuarios() {
+export default function Usuarios({ user }) {
+  const admin = user?.perfil === 'ADMIN'
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState('')
+  const [perfis, setPerfis] = useState([])
+  const [drafts, setDrafts] = useState({})
+  const [saving, setSaving] = useState(null)
+  const [success, setSuccess] = useState('')
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => { carregar() }, [])
@@ -14,7 +19,9 @@ export default function Usuarios() {
     setLoading(true)
     setErro('')
     try {
-      setUsuarios(await api.listUsers())
+      const [users, roles] = await Promise.all([api.listUsers(), admin ? api.profiles() : Promise.resolve([])])
+      setUsuarios(users)
+      setPerfis(roles)
     } catch (err) {
       setErro(err.response?.data?.erro || 'Não foi possível carregar os usuários.')
     } finally {
@@ -28,6 +35,16 @@ export default function Usuarios() {
     setShowModal(false)
   }
 
+  async function saveRole(u) {
+    setSaving(u.id); setErro(''); setSuccess('')
+    try {
+      const updated = await api.updateUserRole(u.id, drafts[u.id])
+      setUsuarios((prev) => prev.map((row) => row.id === u.id ? updated : row))
+      setSuccess(`Perfil de ${updated.name} atualizado.`)
+    } catch (err) { setErro(err.response?.data?.erro || 'Não foi possível atualizar o perfil.') }
+    finally { setSaving(null) }
+  }
+
   return (
     <div className="page">
       <div className="page-head">
@@ -35,11 +52,12 @@ export default function Usuarios() {
           <h1>Usuários</h1>
           <p className="page-sub">Gerencie quem tem acesso ao sistema.</p>
         </div>
-        <button className="btn-new" onClick={() => setShowModal(true)}>+ Novo usuário</button>
+        {admin && <button className="btn-new" onClick={() => setShowModal(true)}>+ Novo usuário</button>}
       </div>
 
       {erro && <div className="login-error" style={{ marginBottom: 18 }}>{erro}</div>}
 
+      {success && <p role="status">{success}</p>}
       {loading ? (
         <p className="page-sub">Carregando usuários...</p>
       ) : (
@@ -58,7 +76,16 @@ export default function Usuarios() {
                     </div>
                   </td>
                   <td>{u.email}</td>
-                  <td>{u.role}</td>
+                  <td>
+                    {admin ? <>
+                    <select aria-label={`Perfil de ${u.name}`} value={drafts[u.id] ?? u.perfil}
+                      disabled={saving !== null} onChange={(e) => setDrafts((prev) => ({ ...prev, [u.id]: e.target.value }))}>
+                      {perfis.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                    </select>
+                    <button className="btn-outline" disabled={saving !== null || !drafts[u.id] || drafts[u.id] === u.perfil}
+                      onClick={() => saveRole(u)}>Salvar</button>
+                    </> : u.role}
+                  </td>
                   <td>
                     <span className="status-pill">
                       <span className="dot" style={{ background: u.ativo ? '#1F9D55' : '#8A94A3' }} />
@@ -72,7 +99,7 @@ export default function Usuarios() {
         </div>
       )}
 
-      {showModal && <NovoUsuarioModal onClose={() => setShowModal(false)} onCreate={handleCreate} />}
+      {admin && showModal && <NovoUsuarioModal onClose={() => setShowModal(false)} onCreate={handleCreate} />}
     </div>
   )
 }

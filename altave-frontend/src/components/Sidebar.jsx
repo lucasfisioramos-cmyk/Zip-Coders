@@ -11,8 +11,8 @@ const ITEMS = [
 
 export default function Sidebar({ collapsed, user }) {
   const [query, setQuery] = useState('')
-  const podeGerenciarUsuarios = user && ['ADMIN', 'GESTOR'].includes(user.perfil)
-  const visiveis = ITEMS.filter((i) => i.to !== '/usuarios' || podeGerenciarUsuarios)
+  const podeGerenciarUsuarios = ['ADMIN', 'GESTOR'].includes(user?.perfil)
+  const visiveis = ITEMS.filter((i) => (i.to !== '/usuarios' || podeGerenciarUsuarios) && (i.to !== '/relatorios' || ['ADMIN', 'GESTOR'].includes(user?.perfil)))
   const items = visiveis.filter((i) => i.label.toLowerCase().includes(query.toLowerCase()))
 
   return (

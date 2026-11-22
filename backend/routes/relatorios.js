@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { requireAuth } from '../middleware/auth.js'
+import { requireAuth, requireRoles } from '../middleware/auth.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import {
   gerarCsvOrdens,
@@ -8,7 +8,7 @@ import {
 } from '../services/relatorios.service.js'
 
 const router = Router()
-router.use(requireAuth)
+router.use(requireAuth, requireRoles('ADMIN', 'GESTOR'))
 
 const texto = (v) => (typeof v === 'string' ? v : undefined)
 

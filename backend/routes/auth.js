@@ -1,3 +1,5 @@
+import { requireAuth } from '../middleware/auth.js'
+import { asyncHandler } from '../lib/asyncHandler.js'
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
@@ -6,7 +8,7 @@ import { PERFIL_LABEL, initials, colorFor } from '../lib/mapping.js'
 
 const router = Router()
 
-router.post('/login', async (req, res) => {
+router.post('/login', asyncHandler(async (req, res) => {
   const { email, senha } = req.body || {}
   if (!email || !senha) return res.status(400).json({ erro: 'Email e senha são obrigatórios.' })
 
@@ -30,6 +32,13 @@ router.post('/login', async (req, res) => {
   }
 
   res.json({ token, user })
+}))
+
+router.get('/me', requireAuth, (req, res) => {
+  const u = req.user
+  res.json({ user: { id: initials(u.nome), dbId: u.id, name: u.nome, email: u.email,
+    role: PERFIL_LABEL[u.perfil], perfil: u.perfil, color: colorFor(u.email),
+    permissoes: { relatorios: ['ADMIN', 'GESTOR'].includes(u.perfil) } } })
 })
 
 export default router
