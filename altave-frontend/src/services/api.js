@@ -14,7 +14,21 @@ http.interceptors.request.use((config) => {
   return config
 })
 
+http.interceptors.response.use((response) => {
+  const perfil = response.headers['x-user-perfil']
+  if (perfil) window.dispatchEvent(new CustomEvent('altave-profile', { detail: perfil }))
+  return response
+}, (error) => {
+  if (error.response?.status === 401 && !error.config.url.endsWith('/auth/login')) {
+    window.dispatchEvent(new Event('altave-session-expired'))
+  }
+  return Promise.reject(error)
+})
+
 export const api = {
+  me: () => http.get('/auth/me').then((r) => r.data.user),
+  profiles: () => http.get('/admin/perfis').then((r) => r.data),
+  updateUserRole: (id, perfil) => http.patch(`/usuarios/${id}/perfil`, { perfil }).then((r) => r.data),
   login: (email, senha) => http.post('/auth/login', { email, senha }).then((r) => r.data),
   listOrders: (params) => http.get('/ordens', { params }).then((r) => r.data),
   createOrder: (data) => http.post('/ordens', data).then((r) => r.data),
