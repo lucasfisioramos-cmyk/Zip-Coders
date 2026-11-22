@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import { RESPONSAVEIS } from '../data/mockData.js'
+import SeletorResponsavel from './SeletorResponsavel.jsx'
 
 const MIN = 5
 const MAX = 1000
 
-export default function EditarOrdemModal({ ordem, onClose, onConfirm }) {
+export default function EditarOrdemModal({ ordem, onClose, onConfirm, responsaveis }) {
   const inicial = {
     titulo: ordem.title,
     descricao: ordem.descricao || '',
     prioridade: ordem.priority,
-    responsavel: ordem.responsavel,
+    responsavelId: ordem.responsavelId || '',
   }
   const [form, setForm] = useState(inicial)
   const [motivo, setMotivo] = useState('')
@@ -17,9 +17,16 @@ export default function EditarOrdemModal({ ordem, onClose, onConfirm }) {
   const [loading, setLoading] = useState(false)
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
-  const rotulos = { titulo: 'Título', descricao: 'Descrição', prioridade: 'Prioridade', responsavel: 'Responsável' }
+  const rotulos = { titulo: 'Título', descricao: 'Descrição', prioridade: 'Prioridade', responsavelId: 'Responsável' }
   const alterados = Object.keys(inicial).filter((k) => form[k] !== inicial[k])
   const valido = alterados.length > 0 && form.titulo.trim() && motivo.trim().length >= MIN
+
+  function rotuloAlteracao(campo, valor) {
+    if (campo !== 'responsavelId') return valor || '—'
+    if (!valor) return 'Não atribuído'
+    if (valor === ordem.responsavelId) return ordem.responsavel
+    return responsaveis.usuarios.find((u) => u.id === valor)?.name || '—'
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -28,7 +35,9 @@ export default function EditarOrdemModal({ ordem, onClose, onConfirm }) {
     setLoading(true)
     try {
       // só envia o que mudou
-      await onConfirm({ ...Object.fromEntries(alterados.map((k) => [k, form[k]])), motivo: motivo.trim() })
+      const dados = Object.fromEntries(alterados.map((k) => [k, form[k]]))
+      if (dados.responsavelId === '') dados.responsavelId = null
+      await onConfirm({ ...dados, motivo: motivo.trim() })
     } catch (err) {
       setErro(err.response?.data?.erro || 'Não foi possível salvar a alteração.')
       setLoading(false)
@@ -66,10 +75,9 @@ export default function EditarOrdemModal({ ordem, onClose, onConfirm }) {
                 </select>
               </div>
               <div className="field">
-                <label htmlFor="ed-resp">Responsável</label>
-                <select id="ed-resp" value={form.responsavel} onChange={(e) => set('responsavel', e.target.value)}>
-                  {RESPONSAVEIS.map((r) => <option key={r}>{r}</option>)}
-                </select>
+                <SeletorResponsavel id="ed-resp" value={form.responsavelId}
+                  onChange={(id) => set('responsavelId', id)} {...responsaveis}
+                  atual={{ id: ordem.responsavelId, nome: ordem.responsavel }} />
               </div>
             </div>
 
@@ -80,7 +88,7 @@ export default function EditarOrdemModal({ ordem, onClose, onConfirm }) {
               {alterados.length === 0
                 ? <span className="os-summary-resp">Nenhum campo alterado ainda.</span>
                 : alterados.map((k) => (
-                    <span key={k} className="os-summary-resp">{rotulos[k]}: {inicial[k] || '—'} → {form[k] || '—'}</span>
+                    <span key={k} className="os-summary-resp">{rotulos[k]}: {rotuloAlteracao(k, inicial[k])} → {rotuloAlteracao(k, form[k])}</span>
                   ))}
             </div>
 

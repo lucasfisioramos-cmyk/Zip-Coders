@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { RESPONSAVEIS } from '../data/mockData.js'
+import SeletorResponsavel from './SeletorResponsavel.jsx'
 
 const today = new Date().toLocaleDateString('pt-BR')
 
-export default function NovaOrdemModal({ user, onClose, onCreate }) {
+export default function NovaOrdemModal({ user, onClose, onCreate, responsaveis }) {
   const [form, setForm] = useState({
-    titulo: '', descricao: '', prioridade: '', responsavel: 'Não atribuído', prazo: '',
+    titulo: '', descricao: '', prioridade: '', responsavelId: '', prazo: '',
   })
 
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })) }
@@ -13,7 +13,7 @@ export default function NovaOrdemModal({ user, onClose, onCreate }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (!form.titulo.trim() || !form.prioridade) return
-    onCreate(form)
+    onCreate({ ...form, responsavelId: form.responsavelId || null })
   }
 
   return (
@@ -45,10 +45,8 @@ export default function NovaOrdemModal({ user, onClose, onCreate }) {
                 </select>
               </div>
               <div className="field">
-                <label>Responsável</label>
-                <select value={form.responsavel} onChange={(e) => set('responsavel', e.target.value)}>
-                  {RESPONSAVEIS.map((r) => <option key={r}>{r}</option>)}
-                </select>
+                <SeletorResponsavel id="nova-os-responsavel" value={form.responsavelId}
+                  onChange={(id) => set('responsavelId', id)} {...responsaveis} />
               </div>
             </div>
             <div className="field">
