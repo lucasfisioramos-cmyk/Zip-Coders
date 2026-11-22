@@ -123,3 +123,7 @@ Duas pastas:
 ## Instalação e implantação
 
 Siga o [manual de instalação e implantação](docs/instalacao.md) para clonar o projeto, subir o PostgreSQL local, configurar a API e o frontend e verificar a aplicação. O manual também descreve a implantação em homologação com banco separado e conta própria.
+
+## Manual de Uso
+
+Siga o [manual de uso](docs/manual-de-uso.md) para tirar suas duvidas sobre o sistema.
