@@ -1,0 +1,25 @@
+.conta-usuario { position: relative; min-width: 0; }
+.conta-usuario .user .avatar { flex-shrink: 0; }
+.conta-usuario .user-name { max-width: min(30vw, 200px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conta-usuario .user[aria-expanded="true"] { background: var(--bg); }
+.conta-usuario-painel {
+  position: absolute; z-index: 20; top: calc(100% + 8px); right: 0;
+  width: 296px; max-width: calc(100vw - 24px); padding: 16px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+}
+.conta-usuario-identidade { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; }
+.conta-usuario-identidade .avatar { flex-shrink: 0; }
+.conta-usuario-identidade strong, .conta-usuario-identidade div > span {
+  display: block; overflow-wrap: anywhere;
+}
+.conta-usuario-identidade strong { color: var(--text); font-size: 14px; }
+.conta-usuario-identidade div > span { margin-top: 4px; color: var(--muted); font-size: 13px; }
+.conta-usuario-acoes { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.conta-usuario-acoes button { font-size: 13px; }
+.conta-usuario-mensagem { margin: 0 0 12px; color: var(--green); font-size: 13px; }
+.conta-usuario-sair { color: var(--red); }
+
+@media (max-width: 540px) {
+  .conta-usuario-painel { position: fixed; top: 59px; right: 12px; }
+}

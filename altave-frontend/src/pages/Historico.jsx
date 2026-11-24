@@ -5,6 +5,7 @@ import './Historico.css'
 
 const TIPOS = {
   criacao: 'Criação',
+  edicao: 'Edição',
   mudanca: 'Mudança de status',
   encerramento: 'Encerramento',
   reabertura: 'Reabertura',

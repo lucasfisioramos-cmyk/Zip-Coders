@@ -70,6 +70,7 @@ model Usuario {
   historicos         Historico[]
   eventosOS          EventoOS[]
   logsAuditoria      LogAuditoria[]
+  notificacoesLidas  LeituraNotificacao[]
 
   @@index([perfil])
   @@index([ativo])
@@ -98,6 +99,7 @@ model OrdemServico {
   // (transição RASCUNHO -> ABERTA), não na criação do registro.
   dataAbertura  DateTime?    @map("data_abertura")
   dataConclusao DateTime?    @map("data_conclusao")
+  prazo         DateTime?    @db.Date
 
   // Preenchidos no encerramento (POST /api/ordens/:codigo/encerrar).
   // Ao reabrir a OS, encerradoPorId volta a null (a autoria continua no historico).
@@ -137,10 +139,23 @@ model Historico {
 
   createdAt      DateTime @default(now()) @map("created_at")
 
+  leituras LeituraNotificacao[]
+
   @@index([ordemId])
   @@index([usuarioId])
   @@index([createdAt])
   @@map("historico")
+}
+
+model LeituraNotificacao {
+  usuarioId   String @map("usuario_id")
+  historicoId String @map("historico_id")
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  historico   Historico @relation(fields: [historicoId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, historicoId])
+  @@index([historicoId])
+  @@map("leituras_notificacoes")
 }
 
 // Linha do tempo completa da OS + log de notificações (mudanças e erros relevantes)

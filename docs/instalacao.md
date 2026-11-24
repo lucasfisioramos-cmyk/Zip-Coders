@@ -10,10 +10,7 @@ A aplicação usa React e Vite no frontend, Node.js e Express na API e PostgreSQ
 
 ```sh
 git clone https://github.com/lucasfisioramos-cmyk/Zip-Coders.git
-cd Zip-Coders
-cp backend/.env.example backend/.env
-cp altave-frontend/.env.example altave-frontend/.env
-openssl rand -hex 32
+docker compose -f compose.local.yaml up -d --wait
 ```
 
 Copie o valor gerado para `JWT_SECRET` em `backend/.env`. As outras variáveis dos exemplos já correspondem ao setup local. O SMTP fica desabilitado por padrão e as mensagens são simuladas no console da API.

@@ -35,3 +35,94 @@
 .rel-filtro { display: grid; gap: 6px; font-size: 14px; }
 .rel-filtros input { min-width: 0; }
 .rel-filtros .btn-outline { margin-left: 0; }
+
+.rel-tipo-grafico {
+  display: flex;
+  width: fit-content;
+  margin: 0 0 12px auto;
+  padding: 3px;
+  gap: 2px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.rel-tipo-grafico button {
+  padding: 7px 13px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rel-tipo-grafico button[aria-pressed="true"] {
+  color: var(--blue-dark);
+  background: #e8f2fc;
+}
+.rel-graficos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.rel-grafico {
+  margin: 0;
+  padding: 18px 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.rel-grafico figcaption {
+  margin-bottom: 16px;
+  color: var(--charcoal);
+  font-size: 16px;
+  font-weight: 700;
+}
+.rel-grafico ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rel-grafico li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(2ch, auto);
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.rel-grafico li > span { overflow-wrap: anywhere; }
+.rel-grafico li strong {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rel-grafico-trilho, .rel-grafico-trilho > span {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+}
+.rel-grafico-trilho { background: var(--border); }
+
+.rel-grafico-pizza {
+  width: min(128px, 100%);
+  aspect-ratio: 1;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background-color: var(--border);
+}
+.rel-grafico-legenda { width: 10px; height: 10px; border-radius: 50%; }
+.rel-grafico-vazio { margin: 0; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 760px) {
+  .rel-grafico { padding: 16px; }
+  .rel-grafico:not(.rel-grafico--pizza) li {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(2ch, auto);
+  }
+}
+
+.rel-grafico--pizza li {
+  grid-template-columns: 10px minmax(0, 1fr) minmax(2ch, auto);
+  gap: 8px;
+}

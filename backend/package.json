@@ -19,6 +19,7 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^6.9.14",
+    "pdfkit": "^0.21.0",
     "swagger-ui-express": "^5.0.1",
     "yamljs": "^0.3.0"
   },

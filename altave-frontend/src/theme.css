@@ -1,0 +1,59 @@
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 23px;
+  line-height: 1;
+}
+.theme-toggle:hover { background: var(--bg); color: var(--blue); }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --blue: #71b7ff;
+  --blue-dark: #86c3ff;
+  --charcoal: #f0f4fa;
+  --bg: #111923;
+  --card: #192431;
+  --border: #354354;
+  --text: #e1e8f1;
+  --muted: #a7b5c6;
+  --red: #ff8493;
+  --orange: #efb463;
+  --green: #62d995;
+  --sombra: #233345;
+  --realce: #29445e;
+}
+:root[data-theme="dark"] :is(
+  .topbar, .filters input, .filters select, .kcol-head .count, .badge-select option,
+  .btn-outline, .btn-secondary, .btn-encerrar, .btn-editar, .usuarios-perfil select,
+  .modal, .modal-foot, .rel-export-menu, .painel-card, .painel-card-total
+) { background: var(--card); border-color: var(--border); }
+:root[data-theme="dark"] :is(.field input, .modal-body textarea, .modal-body select, .modal-close) {
+  background: var(--bg);
+  color: var(--text);
+}
+:root[data-theme="dark"] :is(
+  .os-summary, .tl-obs, .input-disabled, .notificacao-nova, .modal-head, .manual-icon,
+  .rel-tipo-grafico button[aria-pressed="true"], .painel-card.ativo,
+  .rel-export-menu button:hover, .notificacao:hover, .notificacao:focus-visible,
+  .btn-secondary:hover, tr:hover td
+) { background: var(--sombra); }
+:root[data-theme="dark"] :is(.btn-primary, .btn-new) {
+  background: linear-gradient(135deg, #236db4, #194c86);
+}
+:root[data-theme="dark"] :is(.notificacoes-sino span, .btn-editar:hover) { background: #2568a9; }
+:root[data-theme="dark"] :is(.badge.Baixa, .btn-encerrar:hover) { background: #1d774a; }
+:root[data-theme="dark"] .badge.Urgente { background: #ab303f; }
+:root[data-theme="dark"] .badge.Alta { background: #a94b20; }
+:root[data-theme="dark"] :is(.login-error, .rel-erro, .painel-erro) { background: #3b232d; color: var(--red); }
+:root[data-theme="dark"] .login-screen { background: radial-gradient(circle at 30% 20%, #243a51, var(--bg) 72%); }
+:root[data-theme="dark"] .sidebar { background: linear-gradient(165deg, #17283b, #193b56); }
+:root[data-theme="dark"] :is(.avatar, .kavatar, .tl-dot) { box-shadow: 0 0 0 2px var(--card); }
+:root[data-theme="dark"] .painel-card-rotulo { color: var(--muted); }
+:root[data-theme="dark"] .painel-card.ativo { box-shadow: 0 0 0 2px var(--realce); }

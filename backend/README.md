@@ -30,12 +30,10 @@ Criar OS grava `criar_os`.
 
 O [manual de instalação e implantação](../docs/instalacao.md) contém o setup do banco, as variáveis de ambiente, as migrations e a configuração de homologação.
 
-## Observação sobre o schema
-O `schema.prisma` não tem um campo de "prazo previsto" pra OS (só `dataAbertura`/`dataConclusao`).
-O card do Kanban no front tem um campo de prazo — hoje ele fica vazio/null vindo da API porque
-o dado não existe no banco. Se quiser esse prazo de volta, é só adicionar um `DateTime? prazo`
-em `OrdemServico` no schema.prisma e rodar `npx prisma migrate dev` de novo — o mapeamento em
-`lib/mapping.js`/`routes/ordens.js` (variável `prazoInterno`) já está isolado pra plugar isso fácil.
+## Prazo previsto
+
+Envie o campo opcional `prazo` no formato `AAAA-MM-DD` ao criar ou editar uma OS.
+Na edição, envie `null` para remover o prazo. As ordens existentes começam sem prazo.
 
 Login agora é por **email** (não mais "usuario.sobrenome") — reflita isso na tela de login do front
 se ainda estiver pedindo "usuário".

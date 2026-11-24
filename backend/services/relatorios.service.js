@@ -1,6 +1,8 @@
 import ExcelJS from 'exceljs'
+import PDFDocument from 'pdfkit'
 import { prisma } from '../lib/prisma.js'
 import { FUSO_ORDENS, montarWhere } from '../lib/filtros-ordens.js'
+import { PRIORIDADE_DB_TO_API, STATUS_DB_TO_API } from '../lib/mapping.js'
 
 const COLUNAS = ['ID', 'Título', 'Responsável', 'Data de Abertura', 'Data de Conclusão']
 const SEPARADOR = ';' // use ',' se o destino esperar CSV "americano"
@@ -19,6 +21,8 @@ async function buscarOrdens(filtros) {
     select: {
       codigo: true,
       titulo: true,
+      prioridade: true,
+      status: true,
       dataAbertura: true,
       dataConclusao: true,
       responsavel: { select: { nome: true } },
@@ -90,4 +94,55 @@ export async function gerarXlsxOrdens(filtros) {
   ws.autoFilter = { from: 'A1', to: 'E1' }
 
   return Buffer.from(await wb.xlsx.writeBuffer())
+}
+
+export async function gerarPdfOrdens(filtros) {
+  const ordens = await buscarOrdens(filtros)
+  const pdf = new PDFDocument({
+    size: 'A4',
+    layout: 'landscape',
+    margin: 36,
+    info: { Title: 'Relatório de ordens de serviço' },
+  })
+
+  pdf.font('Helvetica-Bold').fontSize(20).fillColor('#233F5A')
+    .text('Relatório de ordens de serviço')
+  pdf.moveDown(0.4).font('Helvetica').fontSize(10).fillColor('#283849')
+    .text(`Total de ordens: ${ordens.length}`)
+  pdf.moveDown()
+
+  if (ordens.length === 0) {
+    pdf.text('Nenhuma ordem encontrada.')
+  } else {
+    pdf.table({
+      headerRows: 1,
+      columnStyles: [110, '*', 72, 110, 90, 77, 88],
+      defaultStyle: {
+        padding: 6,
+        border: [0, 0, 0.5, 0],
+        borderColor: '#DCE4EC',
+        textColor: '#283849',
+      },
+      rowStyles: (indice) => indice === 0
+        ? { font: { src: 'Helvetica-Bold' }, backgroundColor: '#E8F1FA', type: 'TH' }
+        : {},
+      data: [
+        ['OS', 'Título', 'Prioridade', 'Responsável', 'Status', 'Aberta em', 'Concluída em'],
+        ...ordens.map((ordem) => [
+          ordem.codigo,
+          ordem.titulo,
+          PRIORIDADE_DB_TO_API[ordem.prioridade],
+          ordem.responsavel?.nome ?? 'Não atribuído',
+          STATUS_DB_TO_API[ordem.status],
+          fmtData(ordem.dataAbertura),
+          fmtData(ordem.dataConclusao),
+        ]),
+      ],
+    })
+  }
+
+  pdf.end()
+  const partes = []
+  for await (const parte of pdf) partes.push(parte)
+  return Buffer.concat(partes)
 }

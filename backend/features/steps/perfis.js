@@ -79,7 +79,7 @@ When('tento acessar {string}', async function (path) { await request(this, 'GET'
 When('altero o papel de Carlos para {string}', async function (perfil) { await request(this, 'PATCH', '/api/usuarios/carlos/perfil', { perfil }) })
 When('envio uma lista como perfil de Carlos', async function () { await request(this, 'PATCH', '/api/usuarios/carlos/perfil', { perfil: ['ADMIN'] }) })
 When('altero o perfil de um usuário inexistente', async function () { await request(this, 'PATCH', '/api/usuarios/inexistente/perfil', { perfil: 'GESTOR' }) })
-When('tento gerenciar usuários com {string} em {string}', async function (method, path) { await request(this, method, path, { perfil: 'ADMIN', ativo: false }) })
+When('tento gerenciar usuários com {string} em {string}', async function (method, path) { await request(this, method, path, { perfil: 'EXECUTOR', ativo: false }) })
 Then('recebo HTTP {int}', function (status) { assert.equal(this.response.status, status, JSON.stringify(this.body)) })
 Then('recebo HTTP {int} e a mensagem {string}', function (status, message) {
   assert.equal(this.response.status, status)
@@ -124,4 +124,52 @@ Then('recebo os quatro perfis sem dados de senha', function () {
   assert.equal(this.response.status, 200)
   assert.deepEqual(this.body.map((p) => p.value).sort(), ['ADMIN', 'EXECUTOR', 'GESTOR', 'USUARIO'])
   assert.equal(JSON.stringify(this.body).includes('senha'), false)
+})
+
+const membro = { nome: 'Membro de teste', email: 'membro@teste.local', senha: 'teste-apenas-123' }
+
+When('cadastro um membro com perfil {string}', async function (perfil) {
+  await request(this, 'POST', '/api/usuarios', { ...membro, perfil })
+  this.membroId = this.body.id
+})
+When('altero o perfil do membro cadastrado para {string}', async function (perfil) {
+  await request(this, 'PATCH', `/api/usuarios/${this.membroId}/perfil`, { perfil })
+})
+When('mudo o acesso do membro cadastrado para {string}', async function (estado) {
+  await request(this, 'PATCH', `/api/usuarios/${this.membroId}/ativo`, { ativo: estado === 'ativo' })
+})
+Then('o membro consegue entrar no sistema', async function () {
+  await request(this, 'POST', '/api/auth/login', { email: membro.email, senha: membro.senha })
+  assert.equal(this.response.status, 200)
+  this.membroToken = this.body.token
+})
+Then('a sessão do membro retorna o perfil {string}', async function (perfil) {
+  await request(this, 'GET', '/api/auth/me', undefined, this.membroToken)
+  assert.equal(this.response.status, 200)
+  assert.equal(this.body.user.perfil, perfil)
+})
+Then('a sessão do membro está bloqueada', async function () {
+  await request(this, 'GET', '/api/auth/me', undefined, this.membroToken)
+  assert.equal(this.response.status, 401)
+})
+Then('recebo os perfis permitidos para Gestor', function () {
+  assert.equal(this.response.status, 200)
+  assert.deepEqual(this.body.map((p) => p.value).sort(), ['EXECUTOR', 'GESTOR', 'USUARIO'])
+})
+
+When('altero meu nome para {string}', async function (nome) {
+  await request(this, 'GET', '/api/auth/me')
+  this.usuarioAntes = this.body.user
+  await request(this, 'PATCH', '/api/auth/me', { nome, perfil: 'ADMIN', email: 'outro@teste.local' })
+})
+Then('meu nome é {string} com o mesmo email e perfil', async function (nome) {
+  const { user: resultado } = this.body
+  assert.equal(resultado.name, nome)
+  await request(this, 'GET', '/api/auth/me')
+  assert.equal(this.response.status, 200)
+  assert.deepEqual(this.body.user, {
+    ...this.usuarioAntes,
+    id: 'MD',
+    name: nome,
+  })
 })

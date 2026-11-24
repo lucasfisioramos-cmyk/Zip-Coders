@@ -32,7 +32,7 @@ Funcionalidade: Controle de acesso por perfil (ZC-56, ZC-57 e ZC-58)
     Então o perfil "EXECUTOR" está persistido e auditado
     E Carlos perde a permissão de relatórios com o mesmo token
 
-  Esquema do Cenário: Somente Administrador atribui papéis
+  Esquema do Cenário: Somente Administrador atribui o perfil Administrador
     Dado que estou autenticado como "<perfil>"
     Quando altero o papel de Carlos para "ADMIN"
     Então recebo HTTP 403 e a mensagem "Acesso não autorizado"
@@ -43,13 +43,41 @@ Funcionalidade: Controle de acesso por perfil (ZC-56, ZC-57 e ZC-58)
       | EXECUTOR |
       | GESTOR   |
 
-  Esquema do Cenário: Gestor não pode atribuir perfil pelo cadastro
+  Cenário: Gestor cadastra um membro e gerencia seu acesso
     Dado que estou autenticado como "GESTOR"
-    Quando tento gerenciar usuários com "<metodo>" em "<rota>"
+    Quando cadastro um membro com perfil "EXECUTOR"
+    Então recebo HTTP 201
+    E o membro consegue entrar no sistema
+    Quando altero o perfil do membro cadastrado para "GESTOR"
+    Então recebo HTTP 200
+    E a sessão do membro retorna o perfil "GESTOR"
+    Quando mudo o acesso do membro cadastrado para "inativo"
+    Então recebo HTTP 200
+    E a sessão do membro está bloqueada
+    Quando mudo o acesso do membro cadastrado para "ativo"
+    Então recebo HTTP 200
+    E o membro consegue entrar no sistema
+
+  Cenário: Gestor não pode cadastrar um Administrador
+    Dado que estou autenticado como "GESTOR"
+    Quando cadastro um membro com perfil "ADMIN"
+    Então recebo HTTP 403 e a mensagem "Acesso não autorizado"
+
+  Esquema do Cenário: Gestor não pode editar a própria conta nem a de um Administrador
+    Dado que estou autenticado como "GESTOR"
+    Quando tento gerenciar usuários com "PATCH" em "<rota>"
     Então recebo HTTP 403 e a mensagem "Acesso não autorizado"
     Exemplos:
-      | metodo | rota                       |
-      | POST   | /api/usuarios              |
+      | rota                       |
+      | /api/usuarios/ADMIN/ativo  |
+      | /api/usuarios/ADMIN/perfil |
+      | /api/usuarios/GESTOR/ativo |
+      | /api/usuarios/GESTOR/perfil |
+
+  Cenário: Gestor vê apenas os perfis que pode atribuir
+    Dado que estou autenticado como "GESTOR"
+    Quando tento acessar "/api/usuarios/perfis"
+    Então recebo os perfis permitidos para Gestor
 
   Cenário: Perfil inválido não é persistido
     Dado que estou autenticado como "ADMIN"
@@ -89,3 +117,27 @@ Funcionalidade: Controle de acesso por perfil (ZC-56, ZC-57 e ZC-58)
     Dado que estou autenticado como "GESTOR"
     Quando tento gerenciar usuários com "PATCH" em "/api/usuarios/carlos/ativo"
     Então recebo HTTP 200
+
+  Esquema do Cenário: Técnico e Gestor conseguem alterar o próprio nome
+    Dado que estou autenticado como "<perfil>"
+    Quando altero meu nome para "  Maria da Silva  "
+    Então recebo HTTP 200
+    E meu nome é "Maria da Silva" com o mesmo email e perfil
+    Exemplos:
+      | perfil   |
+      | EXECUTOR |
+      | GESTOR   |
+
+  Esquema do Cenário: A edição do próprio nome fica restrita a Técnico e Gestor
+    Dado que estou autenticado como "<perfil>"
+    Quando altero meu nome para "Maria da Silva"
+    Então recebo HTTP 403 e a mensagem "Acesso não autorizado"
+    Exemplos:
+      | perfil  |
+      | ADMIN   |
+      | USUARIO |
+
+  Cenário: Técnico recebe erro ao tentar salvar um nome vazio
+    Dado que estou autenticado como "EXECUTOR"
+    Quando altero meu nome para "   "
+    Então recebo HTTP 400
