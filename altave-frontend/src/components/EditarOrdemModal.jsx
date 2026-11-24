@@ -10,6 +10,7 @@ export default function EditarOrdemModal({ ordem, onClose, onConfirm, responsave
     descricao: ordem.descricao || '',
     prioridade: ordem.priority,
     responsavelId: ordem.responsavelId || '',
+    prazo: ordem.prazo || '',
   }
   const [form, setForm] = useState(inicial)
   const [motivo, setMotivo] = useState('')
@@ -17,11 +18,12 @@ export default function EditarOrdemModal({ ordem, onClose, onConfirm, responsave
   const [loading, setLoading] = useState(false)
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
-  const rotulos = { titulo: 'Título', descricao: 'Descrição', prioridade: 'Prioridade', responsavelId: 'Responsável' }
+  const rotulos = { titulo: 'Título', descricao: 'Descrição', prioridade: 'Prioridade', responsavelId: 'Responsável', prazo: 'Prazo' }
   const alterados = Object.keys(inicial).filter((k) => form[k] !== inicial[k])
   const valido = alterados.length > 0 && form.titulo.trim() && motivo.trim().length >= MIN
 
   function rotuloAlteracao(campo, valor) {
+    if (campo === 'prazo') return valor ? valor.split('-').reverse().join('/') : '—'
     if (campo !== 'responsavelId') return valor || '—'
     if (!valor) return 'Não atribuído'
     if (valor === ordem.responsavelId) return ordem.responsavel
@@ -37,6 +39,7 @@ export default function EditarOrdemModal({ ordem, onClose, onConfirm, responsave
       // só envia o que mudou
       const dados = Object.fromEntries(alterados.map((k) => [k, form[k]]))
       if (dados.responsavelId === '') dados.responsavelId = null
+      if (dados.prazo === '') dados.prazo = null
       await onConfirm({ ...dados, motivo: motivo.trim() })
     } catch (err) {
       setErro(err.response?.data?.erro || 'Não foi possível salvar a alteração.')
@@ -79,6 +82,11 @@ export default function EditarOrdemModal({ ordem, onClose, onConfirm, responsave
                   onChange={(id) => set('responsavelId', id)} {...responsaveis}
                   atual={{ id: ordem.responsavelId, nome: ordem.responsavel }} />
               </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="ed-prazo">Prazo previsto</label>
+              <input id="ed-prazo" type="date" value={form.prazo} onChange={(e) => set('prazo', e.target.value)} />
             </div>
 
             <div className="modal-divider" />

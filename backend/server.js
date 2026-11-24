@@ -6,6 +6,7 @@ import ordensRoutes from './routes/ordens.js'
 import usuariosRoutes from './routes/usuarios.js'
 import dashboardRoutes from './routes/dashboard.js'
 import relatoriosRoutes from './routes/relatorios.js'
+import notificacoesRoutes from './routes/notificacoes.js'
 import swaggerUi from 'swagger-ui-express'
 import YAML from 'yamljs'
 import path from 'path'
@@ -19,7 +20,11 @@ app.use(express.json())
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const swaggerDocument = YAML.load(path.join(__dirname, 'docs', 'openapi.yaml'))
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
+app.get('/api/docs/openapi.json', (_req, res) => res.json(swaggerDocument))
+app.use(['/api/docs', '/api-docs'], swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  customSiteTitle: 'Swagger | Altave API',
+  swaggerOptions: { validatorUrl: null },
+}))
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 app.use('/api/auth', authRoutes)
@@ -27,6 +32,7 @@ app.use('/api/ordens', ordensRoutes)
 app.use('/api/usuarios', usuariosRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/relatorios', relatoriosRoutes)
+app.use('/api/notificacoes', notificacoesRoutes)
 
 app.get(['/api/admin/perfis', '/admin/perfis'], requireAuth, requireRoles('ADMIN'), (_req, res) => {
   res.json(Object.entries(PERFIL_LABEL).map(([value, label]) => ({ value, label })))

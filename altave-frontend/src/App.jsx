@@ -56,6 +56,12 @@ export default function App() {
     setUser(u)
   }
 
+  function handleProfileChange(atualizado) {
+    if (user?.dbId === atualizado.dbId && localStorage.getItem('altave_token')) {
+      handleLogin(atualizado)
+    }
+  }
+
   function handleLogout() {
     localStorage.removeItem('altave_token')
     localStorage.removeItem('altave_user')
@@ -70,7 +76,7 @@ export default function App() {
 
   return (
     <Routes>
-      <Route element={<Layout user={user} onLogout={handleLogout} />}>
+      <Route element={<Layout user={user} onLogout={handleLogout} onProfileChange={handleProfileChange} />}>
         <Route path="/" element={<Navigate to="/kanban" replace />} />
         <Route path="/kanban" element={<Kanban user={user} />} />
         <Route path="/relatorios" element={management ? <Relatorios /> : forbidden} />

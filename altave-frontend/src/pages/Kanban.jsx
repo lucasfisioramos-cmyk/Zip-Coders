@@ -13,6 +13,26 @@ const COLUMNS = [
 ]
 
 const PRIORIDADES = ['Urgente', 'Alta', 'Média', 'Baixa']
+const SEM_RESPONSAVEL = 'sem-responsavel'
+const DATA_LOCAL = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Sao_Paulo', dateStyle: 'short' })
+
+function situacaoPrazo(ordem, hoje) {
+  if (!ordem.prazo) return 'sem-prazo'
+  if (ordem.status === 'Concluída') return ''
+  if (ordem.prazo < hoje) return 'vencida'
+  if (ordem.prazo === hoje) return 'hoje'
+  return 'a-vencer'
+}
+
+function PrazoOrdem({ ordem, hoje }) {
+  const vencida = situacaoPrazo(ordem, hoje) === 'vencida'
+  const prazo = ordem.prazo?.split('-').reverse().join('/')
+  return (
+    <div className={`kcard-meta${vencida ? ' vencida' : ''}`}>
+      <IconCalendar /> {vencida ? `Vencida em ${prazo}` : prazo ? `Prazo: ${prazo}` : 'Sem prazo'}
+    </div>
+  )
+}
 
 const AVATAR_FALLBACK = { CD: '#2E86D8', JP: '#D99A2B', AF: '#1F9D55', '?': '#8A94A3' }
 
@@ -22,6 +42,8 @@ export default function Kanban({ user }) {
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
   const [filtroPrioridade, setFiltroPrioridade] = useState('')
+  const [filtroResponsavel, setFiltroResponsavel] = useState('')
+  const [filtroPrazo, setFiltroPrazo] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [encerrando, setEncerrando] = useState(null) // ordem aguardando confirmação de encerramento
   const [editando, setEditando] = useState(null) // ordem aberta no modal de edição
@@ -60,9 +82,18 @@ export default function Kanban({ user }) {
     return () => { ativo = false }
   }, [modalComResponsavel])
 
+  const opcoesResponsavel = Array.from(new Map(
+    orders.filter((ordem) => ordem.responsavelId)
+      .map((ordem) => [ordem.responsavelId, ordem.responsavel])
+  )).sort(([, a], [, b]) => a.localeCompare(b, 'pt-BR'))
+  const responsavelSelecionado = filtroResponsavel === SEM_RESPONSAVEL ||
+    opcoesResponsavel.some(([id]) => id === filtroResponsavel) ? filtroResponsavel : ''
+  const hoje = DATA_LOCAL.format(new Date())
   const filtered = orders.filter((o) =>
     (o.title.toLowerCase().includes(busca.toLowerCase()) || o.id.toLowerCase().includes(busca.toLowerCase())) &&
-    (!filtroPrioridade || o.priority === filtroPrioridade)
+    (!filtroPrioridade || o.priority === filtroPrioridade) &&
+    (!responsavelSelecionado || (o.responsavelId ?? SEM_RESPONSAVEL) === responsavelSelecionado) &&
+    (!filtroPrazo || situacaoPrazo(o, hoje) === filtroPrazo)
   )
 
   async function changePriority(id, prioridade) {
@@ -149,12 +180,22 @@ export default function Kanban({ user }) {
 
       <div className="filters">
         <input placeholder="Buscar por título ou número da OS" value={busca} onChange={(e) => setBusca(e.target.value)} />
-        <select><option>Responsável: todos</option></select>
-        <select value={filtroPrioridade} onChange={(e) => setFiltroPrioridade(e.target.value)}>
+        <select aria-label="Responsável" value={responsavelSelecionado} onChange={(e) => setFiltroResponsavel(e.target.value)}>
+          <option value="">Responsável: todos</option>
+          <option value={SEM_RESPONSAVEL}>Não atribuído</option>
+          {opcoesResponsavel.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
+        </select>
+        <select aria-label="Prioridade" value={filtroPrioridade} onChange={(e) => setFiltroPrioridade(e.target.value)}>
           <option value="">Prioridade: todas</option>
           {PRIORIDADES.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select><option>Prazo: qualquer</option></select>
+        <select aria-label="Prazo" value={filtroPrazo} onChange={(e) => setFiltroPrazo(e.target.value)}>
+          <option value="">Prazo: qualquer</option>
+          <option value="vencida">Vencidas</option>
+          <option value="hoje">Vencem hoje</option>
+          <option value="a-vencer">A vencer</option>
+          <option value="sem-prazo">Sem prazo</option>
+        </select>
       </div>
 
       {loading ? (
@@ -211,31 +252,45 @@ export default function Kanban({ user }) {
                     </div>
                     <div className="kcard-title">{o.title}</div>
                     {col.key !== 'Concluída' ? (
-                      <div className={`kcard-meta ${o.vencida ? 'vencida' : ''}`}>
-                        <IconCalendar /> {o.vencida ? `Vencida em ${o.prazo}` : `Prazo: ${o.prazo || '—'}`}
-                      </div>
+                      <PrazoOrdem ordem={o} hoje={hoje} />
                     ) : (
                       <div className="kcard-meta done">{o.agingLabel}{o.encerradoPor ? ` por ${o.encerradoPor}` : ''}</div>
                     )}
                     {col.key === 'Concluída' && o.solucao && (
                       <div className="kcard-solucao" title={o.solucao}>{o.solucao}</div>
                     )}
-                    <div className="kcard-bottom">
-                      {col.key !== 'Concluída' && <span className="kcard-aging">{o.agingLabel}</span>}
-                      <div className="kcard-right">
-                        {o.podeEditar && (
-                          <button type="button" className="btn-editar" onClick={(e) => { e.stopPropagation(); setEditando(o) }}>
-                            Editar
-                          </button>
-                        )}
-                        {o.podeEncerrar && (
-                          <button type="button" className="btn-encerrar" onClick={(e) => { e.stopPropagation(); setEncerrando(o) }}>
-                            Encerrar
-                          </button>
-                        )}
-                        <span className="kavatar" style={{ background: o.avatarColor || AVATAR_FALLBACK[o.avatar] || '#9aa4b2' }}>{o.avatar}</span>
+                    <div className="kcard-pessoas">
+                      {o.solicitante && (
+                        <div className="kcard-pessoa">
+                          <span className="kavatar" aria-hidden="true" style={{ background: o.solicitanteAvatarColor }}>{o.solicitanteAvatar}</span>
+                          <span>Criada por <strong>{o.solicitante}</strong></span>
+                        </div>
+                      )}
+                      <div className="kcard-pessoa">
+                        <span className="kavatar" aria-hidden="true"
+                          style={{ background: o.avatarColor || AVATAR_FALLBACK[o.avatar] || '#9aa4b2' }}>{o.avatar}</span>
+                        {o.responsavelId
+                          ? <span>Atribuída a <strong>{o.responsavel}</strong></span>
+                          : <span>Sem responsável</span>}
                       </div>
                     </div>
+                    {col.key !== 'Concluída' && (
+                      <div className="kcard-bottom">
+                        <span className="kcard-aging">{o.agingLabel}</span>
+                        <div className="kcard-right">
+                          {o.podeEditar && (
+                            <button type="button" className="btn-editar" onClick={(e) => { e.stopPropagation(); setEditando(o) }}>
+                              Editar
+                            </button>
+                          )}
+                          {o.podeEncerrar && (
+                            <button type="button" className="btn-encerrar" onClick={(e) => { e.stopPropagation(); setEncerrando(o) }}>
+                              Encerrar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
 

@@ -3,7 +3,83 @@ import { api } from '../services/api.js'
 import './Relatorios.css'
 
 const FILTROS_PADRAO = { status: '', responsavel: '', dataInicio: '', dataFim: '' }
-const STATUS = ['Aberta', 'Em andamento', 'Concluída']
+const STATUS = [
+  ['Aberta', 'var(--gray)'],
+  ['Em andamento', 'var(--blue)'],
+  ['Concluída', 'var(--green)'],
+]
+const PRIORIDADES = [
+  ['Urgente', 'var(--red)'],
+  ['Alta', '#E8772E'],
+  ['Média', '#E3B505'],
+  ['Baixa', 'var(--green)'],
+]
+
+function categoriasPorResponsavel(ordens) {
+  const nomes = new Map(
+    (ordens ?? []).map((ordem) => [ordem.responsavelId ?? null, ordem.responsavel]),
+  )
+  const pessoas = [...nomes]
+    .filter(([id]) => id !== null)
+    .sort(([idA, nomeA], [idB, nomeB]) => nomeA.localeCompare(nomeB, 'pt-BR') || idA.localeCompare(idB))
+
+  const categorias = pessoas.map(([id, nome], indice) => [
+    nome, `hsl(${(210 + indice * 137.5) % 360} 58% 43%)`, id,
+  ])
+  if (nomes.has(null)) categorias.push(['Sem responsável', 'var(--gray)', null])
+  return categorias
+}
+
+function fundoPizza(fatias, total) {
+  if (!total) return undefined
+
+  let acumulado = 0
+  const segmentos = fatias.filter(({ quantidade }) => quantidade > 0).map(({ cor, quantidade }) => {
+    const inicio = acumulado / total * 100
+    acumulado += quantidade
+    return `${cor} ${inicio}% ${acumulado / total * 100}%`
+  })
+  return segmentos.length ? `conic-gradient(${segmentos.join(', ')})` : undefined
+}
+
+function GraficoOrdens({ titulo, ordens, campo, categorias, pizza }) {
+  const contagem = new Map()
+  for (const ordem of ordens ?? []) {
+    const valor = ordem[campo] ?? null
+    contagem.set(valor, (contagem.get(valor) ?? 0) + 1)
+  }
+  const total = ordens?.length ?? 0
+  const fatias = categorias.map(([rotulo, cor, chave = rotulo]) => ({
+    chave, rotulo, cor, quantidade: contagem.get(chave) ?? 0,
+  }))
+
+  return (
+    <figure className={`rel-grafico${pizza ? ' rel-grafico--pizza' : ''}`}>
+      <figcaption>{titulo}</figcaption>
+      {pizza && (
+        <div className="rel-grafico-pizza" aria-hidden="true" style={{ backgroundImage: fundoPizza(fatias, total) }} />
+      )}
+      {fatias.length === 0 ? (
+        <p className="rel-grafico-vazio">{ordens ? 'Nenhuma ordem para exibir.' : 'Carregando…'}</p>
+      ) : (
+        <ul>
+          {fatias.map(({ chave, rotulo, cor, quantidade }) => (
+            <li key={chave ?? 'sem-responsavel'}>
+              {pizza && <span className="rel-grafico-legenda" aria-hidden="true" style={{ backgroundColor: cor }} />}
+              <span>{rotulo}</span>
+              {!pizza && (
+                <span className="rel-grafico-trilho" aria-hidden="true">
+                  <span style={{ width: `${total ? quantidade / total * 100 : 0}%`, backgroundColor: cor }} />
+                </span>
+              )}
+              <strong>{ordens ? quantidade : '—'}</strong>
+            </li>
+          ))}
+        </ul>
+      )}
+    </figure>
+  )
+}
 
 function parametros(filtros) {
   return Object.fromEntries(Object.entries(filtros).filter(([, valor]) => valor))
@@ -41,9 +117,11 @@ export default function Relatorios() {
   const [responsaveis, setResponsaveis] = useState([])
   const [totalOrdens, setTotalOrdens] = useState(null)
 
+  const [pizza, setPizza] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [exportando, setExportando] = useState(false)
   const [erroExport, setErroExport] = useState('')
+  const ordensGrafico = carregando ? null : ordens
   const carregamentoInicial = carregando && totalOrdens === null
   const intervaloInvalido = Boolean(filtros.dataInicio && filtros.dataFim && filtros.dataInicio > filtros.dataFim)
 
@@ -95,7 +173,7 @@ export default function Relatorios() {
     setErroExport('')
     setExportando(true)
     try {
-      const blob = await api.exportOrdersCsv({ formato, ...parametros(filtros) })
+      const blob = await api.exportOrders({ formato, ...parametros(filtros) })
       baixarArquivo(blob, `ordens-${new Date().toLocaleDateString('sv-SE')}.${formato}`)
     } catch (e) {
       setErroExport(await mensagemDeErro(e))
@@ -114,7 +192,7 @@ export default function Relatorios() {
           <label htmlFor="filtro-status">Status</label>
           <select id="filtro-status" name="status" disabled={carregamentoInicial} value={filtros.status} onChange={alterarFiltro}>
             <option value="">Todos</option>
-            {STATUS.map((status) => <option key={status}>{status}</option>)}
+            {STATUS.map(([status]) => <option key={status}>{status}</option>)}
           </select>
         </div>
 
@@ -138,6 +216,21 @@ export default function Relatorios() {
 
         <button type="button" className="btn-outline" onClick={limparFiltros}>Limpar Filtros</button>
       </form>
+
+      {!erro && !intervaloInvalido && (
+        <>
+          <div className="rel-tipo-grafico" role="group" aria-label="Tipo de gráfico">
+            <button type="button" aria-pressed={!pizza} onClick={() => setPizza(false)}>Barras</button>
+            <button type="button" aria-pressed={pizza} onClick={() => setPizza(true)}>Pizza</button>
+          </div>
+          <div className="rel-graficos" aria-busy={carregando}>
+            <GraficoOrdens titulo="Ordens por status" ordens={ordensGrafico} campo="status" categorias={STATUS} pizza={pizza} />
+            <GraficoOrdens titulo="Ordens por prioridade" ordens={ordensGrafico} campo="priority" categorias={PRIORIDADES} pizza={pizza} />
+            <GraficoOrdens titulo="Ordens por responsável" ordens={ordensGrafico} campo="responsavelId"
+              categorias={categoriasPorResponsavel(ordensGrafico)} pizza={pizza} />
+          </div>
+        </>
+      )}
 
       {erroExport && <p className="rel-erro">{erroExport}</p>}
 
@@ -187,7 +280,7 @@ export default function Relatorios() {
               <div className="rel-export-menu">
                 <button onClick={() => exportar('csv')}>CSV</button>
                 <button onClick={() => exportar('xlsx')}>Excel (.xlsx)</button>
-                <button disabled title="Em breve">PDF (em breve)</button>
+                <button onClick={() => exportar('pdf')}>PDF (.pdf)</button>
               </div>
             )}
           </div>

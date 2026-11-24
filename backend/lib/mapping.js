@@ -7,6 +7,14 @@ export const STATUS_DB_TO_API = {
   CONCLUIDA: 'Concluída',
   CANCELADA: 'Cancelada',
 }
+export function tipoEvento(h) {
+  if (!h.statusAnterior) return 'criacao'
+  if (h.statusAnterior === h.statusNovo) return 'edicao' // edição de campos: status não muda
+  if (h.statusNovo === 'CONCLUIDA') return 'encerramento'
+  if (h.statusAnterior === 'CONCLUIDA') return 'reabertura'
+  return 'mudanca'
+}
+
 export const STATUS_API_TO_DB = {
   Aberta: 'ABERTA',
   'Em andamento': 'EM_ANDAMENTO',

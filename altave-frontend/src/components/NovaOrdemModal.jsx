@@ -50,8 +50,8 @@ export default function NovaOrdemModal({ user, onClose, onCreate, responsaveis }
               </div>
             </div>
             <div className="field">
-              <label>Prazo previsto</label>
-              <input type="date" value={form.prazo} onChange={(e) => set('prazo', e.target.value)} />
+              <label htmlFor="nova-os-prazo">Prazo previsto</label>
+              <input id="nova-os-prazo" type="date" value={form.prazo} onChange={(e) => set('prazo', e.target.value)} />
             </div>
 
             <div className="modal-divider" />

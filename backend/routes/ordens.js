@@ -8,7 +8,7 @@ import { notificarAtribuicao, notificarMudancaStatus } from '../lib/notificacoes
 import {
   STATUS_DB_TO_API, STATUS_API_TO_DB, STATUS_KANBAN_DB,
   PRIORIDADE_DB_TO_API, PRIORIDADE_API_TO_DB,
-  initials, colorFor,
+  initials, colorFor, tipoEvento,
 } from '../lib/mapping.js'
 
 const router = Router()
@@ -61,6 +61,16 @@ function podeEditar(user, o) {
 
 class ResponsavelInvalido extends Error {}
 
+function lerPrazo(valor) {
+  if (valor === undefined) return undefined
+  if (valor === null || valor === '') return null
+  if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(valor) && !valor.startsWith('0000')) {
+    const data = new Date(valor + 'T00:00:00Z')
+    if (!Number.isNaN(data.getTime()) && data.toISOString().slice(0, 10) === valor) return data
+  }
+  throw new FiltroInvalidoError('Informe um prazo válido no formato AAAA-MM-DD.')
+}
+
 async function resolverResponsavel(responsavelId, nome) {
   if (responsavelId === null || (responsavelId === undefined && (!nome || nome === 'Não atribuído'))) return null
   const porId = responsavelId !== undefined
@@ -89,8 +99,11 @@ function toApi(o, user) {
     avatarColor: o.responsavel ? colorFor(o.responsavel.email) : '#9aa4b2',
     abertaEm: fmtDate(o.dataAbertura),
     concluidaEm: fmtDate(o.dataConclusao),
+    prazo: o.prazo?.toISOString().slice(0, 10) ?? null,
     encerradoPor: o.encerradoPor ? o.encerradoPor.nome : null,
-    solicitante: o.solicitante ? o.solicitante.nome : null,
+    solicitante: o.solicitante?.nome ?? null,
+    solicitanteAvatar: o.solicitante ? initials(o.solicitante.nome) : null,
+    solicitanteAvatarColor: o.solicitante ? colorFor(o.solicitante.email) : null,
     agingLabel: agingLabel(o),
     solucao: o.solucao,
     podeEditar: podeEditar(user, o),
@@ -127,7 +140,7 @@ async function nextCodigo() {
 }
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { titulo, descricao, prioridade, responsavel, responsavelId } = req.body || {}
+  const { titulo, descricao, prioridade, responsavel, responsavelId, prazo } = req.body || {}
   if (!titulo) return res.status(400).json({ erro: 'Título é obrigatório.' })
   const prioridadeDb = PRIORIDADE_API_TO_DB[prioridade]
   if (!prioridadeDb) {
@@ -135,10 +148,12 @@ router.post('/', asyncHandler(async (req, res) => {
   }
 
   let pessoa
+  let prazoPrevisto
   try {
+    prazoPrevisto = lerPrazo(prazo)
     pessoa = await resolverResponsavel(responsavelId, responsavel)
   } catch (err) {
-    if (err instanceof ResponsavelInvalido) return res.status(400).json({ erro: err.message })
+    if (err instanceof ResponsavelInvalido || err instanceof FiltroInvalidoError) return res.status(400).json({ erro: err.message })
     throw err
   }
 
@@ -151,6 +166,7 @@ router.post('/', asyncHandler(async (req, res) => {
       prioridade: prioridadeDb,
       status: 'ABERTA',
       dataAbertura: new Date(),
+      prazo: prazoPrevisto ?? null,
       solicitanteId: req.user.id,
       responsavelId: pessoa?.id ?? null,
       historicos: { create: { usuarioId: req.user.id, statusAnterior: null, statusNovo: 'ABERTA' } },
@@ -169,14 +185,6 @@ router.post('/', asyncHandler(async (req, res) => {
 // GET /api/ordens/:codigo/historico
 // Linha do tempo da OS (mais antiga primeiro): criação, mudanças de status, encerramento e reabertura.
 // Qualquer usuário autenticado pode consultar, assim como já pode ver a OS no quadro.
-function tipoEvento(h) {
-  if (!h.statusAnterior) return 'criacao'
-  if (h.statusAnterior === h.statusNovo) return 'edicao' // edição de campos: status não muda
-  if (h.statusNovo === 'CONCLUIDA') return 'encerramento'
-  if (h.statusAnterior === 'CONCLUIDA') return 'reabertura'
-  return 'mudanca'
-}
-
 router.get('/:codigo/historico', asyncHandler(async (req, res) => {
   const ordem = await prisma.ordemServico.findUnique({
     where: { codigo: req.params.codigo },
@@ -201,10 +209,10 @@ router.get('/:codigo/historico', asyncHandler(async (req, res) => {
   })
 }))
 
-// PATCH /api/ordens/:codigo  { titulo?, descricao?, prioridade?, responsavel?, motivo }
+// PATCH /api/ordens/:codigo  { titulo?, descricao?, prioridade?, responsavel?, prazo?, motivo }
 // Edita campos da OS. `motivo` é obrigatório: vai para o histórico e para o e-mail dos envolvidos.
 router.patch('/:codigo', asyncHandler(async (req, res) => {
-  const { titulo, descricao, prioridade, responsavel, responsavelId } = req.body || {}
+  const { titulo, descricao, prioridade, responsavel, responsavelId, prazo } = req.body || {}
   const motivo = typeof req.body?.motivo === 'string' ? req.body.motivo.trim() : ''
   if (motivo.length < 5) return res.status(400).json({ erro: 'Informe a breve descrição da alteração (mínimo de 5 caracteres).' })
   if (motivo.length > 1000) return res.status(400).json({ erro: 'A descrição da alteração é longa demais (máximo de 1000 caracteres).' })
@@ -224,13 +232,15 @@ router.patch('/:codigo', asyncHandler(async (req, res) => {
 
   // undefined mantém o responsável atual, null remove a atribuição.
   let novoResp
-  if (responsavelId !== undefined || responsavel !== undefined) {
-    try {
+  let prazoPrevisto
+  try {
+    prazoPrevisto = lerPrazo(prazo)
+    if (responsavelId !== undefined || responsavel !== undefined) {
       novoResp = await resolverResponsavel(responsavelId, responsavel)
-    } catch (err) {
-      if (err instanceof ResponsavelInvalido) return res.status(400).json({ erro: err.message })
-      throw err
     }
+  } catch (err) {
+    if (err instanceof ResponsavelInvalido || err instanceof FiltroInvalidoError) return res.status(400).json({ erro: err.message })
+    throw err
   }
 
   // Diff: só entra o que de fato mudou. Prioridade compara pelo rótulo da API (URGENTE aparece como "Alta").
@@ -245,6 +255,10 @@ router.patch('/:codigo', asyncHandler(async (req, res) => {
     data.responsavelId = novoResp?.id ?? null
     muda('Responsável', atual.responsavel?.nome || 'Não atribuído', novoResp?.nome || 'Não atribuído')
   }
+  if (prazoPrevisto !== undefined && prazoPrevisto?.getTime() !== atual.prazo?.getTime()) {
+    data.prazo = prazoPrevisto
+    muda('Prazo', atual.prazo?.toISOString().slice(0, 10), prazoPrevisto?.toISOString().slice(0, 10))
+  }
   if (!mudancas.length) return res.status(400).json({ erro: 'Nenhuma alteração para salvar.' })
 
   const resumo = mudancas.join('\n')
@@ -256,6 +270,7 @@ router.patch('/:codigo', asyncHandler(async (req, res) => {
           codigo: atual.codigo,
           status: atual.status,
           ...(data.responsavelId !== undefined && { responsavelId: atual.responsavelId }),
+          ...(data.prazo !== undefined && { prazo: atual.prazo }),
         },
         data: {
           ...data,
@@ -367,16 +382,20 @@ router.patch('/:codigo/prioridade', asyncHandler(async (req, res) => {
 
   const de = PRIORIDADE_DB_TO_API[atual.prioridade] || null
   const para = PRIORIDADE_DB_TO_API[prioridadeDb]
+  const resumo = `Prioridade alterada de ${de || 'não definida'} para ${para}`
   const [ordem] = await prisma.$transaction([
     prisma.ordemServico.update({
       where: { codigo: atual.codigo },
       data: {
         prioridade: prioridadeDb,
+        historicos: { create: {
+          usuarioId: req.user.id, statusAnterior: atual.status, statusNovo: atual.status, observacao: resumo,
+        } },
         eventos: {
           create: {
             usuarioId: req.user.id,
             tipo: 'CAMPO_ALTERADO',
-            mensagem: `Prioridade alterada de ${de || 'não definida'} para ${para}`,
+            mensagem: resumo,
             detalhes: { campo: 'prioridade', de: atual.prioridade, para: prioridadeDb },
           },
         },

@@ -3,6 +3,7 @@ import { requireAuth, requireRoles } from '../middleware/auth.js'
 import { asyncHandler } from '../lib/asyncHandler.js'
 import {
   gerarCsvOrdens,
+  gerarPdfOrdens,
   gerarXlsxOrdens,
 } from '../services/relatorios.service.js'
 import { FiltroInvalidoError, lerFiltros } from '../lib/filtros-ordens.js'
@@ -12,7 +13,7 @@ router.use(requireAuth, requireRoles('ADMIN', 'GESTOR'))
 
 // GET /api/relatorios/ordens/exportar
 router.get('/ordens/exportar', asyncHandler(async (req, res) => {
-  const formato = req.query.formato === 'xlsx' ? 'xlsx' : 'csv'
+  const { formato } = req.query
   const dia = new Date().toLocaleDateString('sv-SE') // aaaa-mm-dd
 
   try {
@@ -24,6 +25,13 @@ router.get('/ordens/exportar', asyncHandler(async (req, res) => {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       )
       res.setHeader('Content-Disposition', `attachment; filename="ordens-${dia}.xlsx"`)
+      return res.send(buffer)
+    }
+
+    if (formato === 'pdf') {
+      const buffer = await gerarPdfOrdens(filtros)
+      res.type('pdf')
+      res.setHeader('Content-Disposition', `attachment; filename="ordens-${dia}.pdf"`)
       return res.send(buffer)
     }
 
