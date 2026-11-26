@@ -28,13 +28,12 @@ O foco desta última etapa é entregar uma plataforma robusta, segura e totalmen
 
 | Critério | Descrição |
 |---------|----------|
-| Clareza na Descrição | A User Story descreve claramente a funcionalidade relacionada aos dados dos deputados. |
+| Clareza na Descrição | A User Story descreve claramente a funcionalidade a ser implementada. |
 | Critérios de Aceitação Definidos | Estão definidos critérios como exibição correta de dados, funcionamento da busca e carregamento das informações. |
 | Cenários de Teste Especificados | Existem cenários de teste para validar funcionalidades como listagem, busca e visualização de dados. |
 | Independente | A funcionalidade pode ser desenvolvida sem depender de outra da Sprint. |
 | Compreensão Compartilhada | A equipe entende como os dados devem ser exibidos e utilizados no sistema. |
 | Estimável | A história possui estimativa baseada na complexidade da funcionalidade. |
-| Documentos de Apoio | Protótipos (Figma) ou referências das telas estão disponíveis. |
 
 ---
 
